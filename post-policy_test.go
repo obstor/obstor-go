@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 func TestPostPolicySetExpires(t *testing.T) {

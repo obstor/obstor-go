@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2020 MinIO, Inc.
+ * Obstor Client (C) 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,14 +105,14 @@ func (c *Config) AddRule(opts Options) error {
 	if err != nil {
 		return err
 	}
-	var compatSw bool // true if RoleArn is used with new mc client and older minio version prior to multisite
+	var compatSw bool // true if RoleArn is used with new mc client and older obstor version prior to multisite
 	if opts.RoleArn != "" {
 		tokens := strings.Split(opts.RoleArn, ":")
 		if len(tokens) != 6 {
 			return fmt.Errorf("invalid format for replication Role Arn: %v", opts.RoleArn)
 		}
 		switch {
-		case strings.HasPrefix(opts.RoleArn, "arn:minio:replication") && len(c.Rules) == 0:
+		case strings.HasPrefix(opts.RoleArn, "arn:obstor:replication") && len(c.Rules) == 0:
 			c.Role = opts.RoleArn
 			compatSw = true
 		case strings.HasPrefix(opts.RoleArn, "arn:aws:iam"):
@@ -221,7 +221,7 @@ func (c *Config) AddRule(opts Options) error {
 		},
 		DeleteMarkerReplication: DeleteMarkerReplication{Status: dmStatus},
 		DeleteReplication:       DeleteReplication{Status: vDeleteStatus},
-		// MinIO enables replica metadata syncing by default in the case of bi-directional replication to allow
+		// Obstor enables replica metadata syncing by default in the case of bi-directional replication to allow
 		// automatic failover as the expectation in this case is that replica and source should be identical.
 		// However AWS leaves this configurable https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-for-metadata-changes.html
 		SourceSelectionCriteria: SourceSelectionCriteria{
@@ -239,7 +239,7 @@ func (c *Config) AddRule(opts Options) error {
 	if err := newRule.Validate(); err != nil {
 		return err
 	}
-	// if replication config uses RoleArn, migrate this to the destination element as target ARN for remote bucket for MinIO configuration
+	// if replication config uses RoleArn, migrate this to the destination element as target ARN for remote bucket for Obstor configuration
 	if c.Role != "" && !strings.HasPrefix(c.Role, "arn:aws:iam") && !compatSw {
 		for i := range c.Rules {
 			c.Rules[i].Destination.Bucket = c.Role
@@ -344,7 +344,7 @@ func (c *Config) EditRule(opts Options) error {
 		}
 	}
 
-	// set DeleteReplication rule status for edit option. This is a MinIO specific
+	// set DeleteReplication rule status for edit option. This is a Obstor specific
 	// option to replicate versioned deletes
 	if opts.ReplicateDeletes != "" {
 		switch opts.ReplicateDeletes {
@@ -632,7 +632,7 @@ func (d DeleteMarkerReplication) IsEmpty() bool {
 }
 
 // DeleteReplication - whether versioned deletes are replicated - this
-// is a MinIO specific extension
+// is a Obstor specific extension
 type DeleteReplication struct {
 	Status Status `xml:"Status" json:"Status"` // should be set to "Disabled" by default
 }

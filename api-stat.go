@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
 	"net/http"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // BucketExists verifies if bucket exists and you have permission to access it. Allows for a Context to
@@ -70,16 +70,16 @@ func (c *Client) StatObject(ctx context.Context, bucketName, objectName string, 
 	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return ObjectInfo{}, ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Code:       XMinioInvalidObjectName,
+			Code:       XObstorInvalidObjectName,
 			Message:    err.Error(),
 		}
 	}
 	headers := opts.Header()
 	if opts.Internal.ReplicationDeleteMarker {
-		headers.Set(minIOBucketReplicationDeleteMarker, "true")
+		headers.Set(obstorBucketReplicationDeleteMarker, "true")
 	}
 	if opts.Internal.IsReplicationReadyForDeleteMarker {
-		headers.Set(isMinioTgtReplicationReady, "true")
+		headers.Set(isObstorTgtReplicationReady, "true")
 	}
 
 	// Execute HEAD on objectName.
@@ -97,7 +97,7 @@ func (c *Client) StatObject(ctx context.Context, bucketName, objectName string, 
 
 	if resp != nil {
 		deleteMarker := resp.Header.Get(amzDeleteMarker) == "true"
-		replicationReady := resp.Header.Get(minioTgtReplicationReady) == "true"
+		replicationReady := resp.Header.Get(obstorTgtReplicationReady) == "true"
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 			if resp.StatusCode == http.StatusMethodNotAllowed && opts.VersionID != "" && deleteMarker {
 				errResp := ErrorResponse{

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -23,12 +23,12 @@ import (
 	"math"
 	"os"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 const nullVersionID = "null"
 
-// Verify if reader is *minio.Object
+// Verify if reader is *obstor.Object
 func isObject(reader io.Reader) (ok bool) {
 	_, ok = reader.(*Object)
 	return ok

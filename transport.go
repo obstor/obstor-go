@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"crypto/tls"

@@ -27,9 +27,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 func main() {
@@ -38,8 +38,8 @@ func main() {
 		// please replace them with values for your setup.
 		YOURACCESSKEYID     = "Q3AM3UQ867SPQQA43P2F"
 		YOURSECRETACCESSKEY = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
-		YOURENDPOINT        = "play.min.io"
-		YOURBUCKET          = "mybucket" // 'mc mb play/mybucket' if it does not exist.
+		YOURENDPOINT        = "demo.obstor.net"
+		YOURBUCKET          = "mybucket" // 'mc mb demo/mybucket' if it does not exist.
 	)
 
 	// Requests are always secure (HTTPS) by default. Set secure=false to enable insecure (HTTP) access.
@@ -47,7 +47,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	minioClient, err := minio.New(YOURENDPOINT, &minio.Options{
+	obstorClient, err := obstor.New(YOURENDPOINT, &obstor.Options{
 		Creds:  credentials.NewStaticV4(YOURACCESSKEYID, YOURSECRETACCESSKEY, ""),
 		Secure: true,
 	})
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// Enable tracing.
-	minioClient.TraceOn(os.Stdout)
+	obstorClient.TraceOn(os.Stdout)
 
 	filePath := "my-testfile" // Specify a local file that we will upload
 
@@ -67,7 +67,7 @@ func main() {
 	}
 	defer file.Close()
 
-	cs, err := minio.ChecksumCRC32C.ChecksumReader(file)
+	cs, err := obstor.ChecksumCRC32C.ChecksumReader(file)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -75,8 +75,8 @@ func main() {
 	// Seek to beginning before upload.
 	file.Seek(0, io.SeekStart)
 
-	fanOutReq := minio.PutObjectFanOutRequest{
-		Entries: []minio.PutObjectFanOutEntry{
+	fanOutReq := obstor.PutObjectFanOutRequest{
+		Entries: []obstor.PutObjectFanOutEntry{
 			{Key: "my1-prefix/1.txt"},
 			{Key: "my1-prefix/2.txt"},
 			{Key: "my1-prefix/3.txt"},
@@ -88,7 +88,7 @@ func main() {
 		Checksum: cs,
 	}
 
-	fanOutResp, err := minioClient.PutObjectFanOut(context.Background(), YOURBUCKET, file, fanOutReq)
+	fanOutResp, err := obstorClient.PutObjectFanOut(context.Background(), YOURBUCKET, file, fanOutReq)
 	if err != nil {
 		log.Fatalln(err)
 	}

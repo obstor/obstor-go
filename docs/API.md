@@ -1,10 +1,10 @@
-MinIO Go Client API Reference [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io)
+Obstor Go Client API Reference
 ===================================================================================================
 
-Initialize MinIO Client object.
+Initialize Obstor Client object.
 -------------------------------
 
-MinIO
+Obstor
 -----
 
 ```go
@@ -13,18 +13,18 @@ package main
 import (
 	"log"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
-	endpoint := "play.min.io"
+	endpoint := "demo.obstor.net"
 	accessKeyID := "Q3AM3UQ867SPQQA43P2F"
 	secretAccessKey := "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
 	useSSL := true
 
-	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, &minio.Options{
+	// Initialize obstor client object.
+	obstorClient, err := obstor.New(endpoint, &obstor.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
 	})
@@ -32,7 +32,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Printf("%#v\n", minioClient) // minioClient is now setup
+	log.Printf("%#v\n", obstorClient) // obstorClient is now setup
 }
 ```
 
@@ -45,13 +45,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
-	// Initialize minio client object.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	// Initialize obstor client object.
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -90,7 +90,7 @@ func main() {
 
 1.	Constructor --------------
 
-<a name="MinIO"></a>
+<a name="Obstor"></a>
 
 ### New(endpoint string, opts \*Options) (\*Client, error)
 
@@ -101,9 +101,9 @@ Initializes a new client object.
 | Param      | Type            | Description                           |
 |:-----------|:----------------|:--------------------------------------|
 | `endpoint` | *string*        | S3 compatible object storage endpoint |
-| `opts`     | *minio.Options* | Options for constructing a new client |
+| `opts`     | *obstor.Options* | Options for constructing a new client |
 
-**minio.Options**
+**obstor.Options**
 
 | Field               | Type                        | Description                                                                  |
 |:--------------------|:----------------------------|:-----------------------------------------------------------------------------|
@@ -112,9 +112,9 @@ Initializes a new client object.
 | `opts.Transport`    | *http.RoundTripper*         | Custom transport for executing HTTP transactions                             |
 | `opts.Region`       | *string*                    | S3 compatible object storage region                                          |
 | `opts.BucketLookup` | *BucketLookupType*          | Bucket lookup type can be one of the following values                        |
-|                     |                             | *minio.BucketLookupDNS*                                                      |
-|                     |                             | *minio.BucketLookupPath*                                                     |
-|                     |                             | *minio.BucketLookupAuto*                                                     |
+|                     |                             | *obstor.BucketLookupDNS*                                                      |
+|                     |                             | *obstor.BucketLookupPath*                                                     |
+|                     |                             | *obstor.BucketLookupAuto*                                                     |
 
 1.	Bucket operations --------------------
 
@@ -130,7 +130,7 @@ Creates a new bucket.
 |--------------|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `ctx`        | *context.Context*         | Custom context for timeout/cancellation of the call                                                                                                                                                                                         |
 | `bucketName` | *string*                  | Name of the bucket                                                                                                                                                                                                                          |
-| `opts`       | *minio.MakeBucketOptions* | Bucket options such as `Region` where the bucket is to be created. Default value is us-east-1. Other valid values are listed below. Note: When used with minio server, use the region specified in its config file (defaults to us-east-1). |
+| `opts`       | *obstor.MakeBucketOptions* | Bucket options such as `Region` where the bucket is to be created. Default value is us-east-1. Other valid values are listed below. Note: When used with obstor server, use the region specified in its config file (defaults to us-east-1). |
 |              |                           | us-east-1                                                                                                                                                                                                                                   |
 |              |                           | us-east-2                                                                                                                                                                                                                                   |
 |              |                           | us-west-1                                                                                                                                                                                                                                   |
@@ -159,7 +159,7 @@ Creates a new bucket.
 
 ```go
 // Create a bucket at region 'us-east-1' with object locking enabled.
-err = minioClient.MakeBucket(context.Background(), "mybucket", minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+err = obstorClient.MakeBucket(context.Background(), "mybucket", obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 if err != nil {
 	fmt.Println(err)
 	return
@@ -176,9 +176,9 @@ Lists all buckets.
 | Param        | Type                 | Description                                         |
 |--------------|----------------------|-----------------------------------------------------|
 | `ctx`        | *context.Context*    | Custom context for timeout/cancellation of the call |
-| `bucketList` | *[]minio.BucketInfo* | Lists of all buckets                                |
+| `bucketList` | *[]obstor.BucketInfo* | Lists of all buckets                                |
 
-**minio.BucketInfo**
+**obstor.BucketInfo**
 
 | Field                 | Type        | Description             |
 |-----------------------|-------------|-------------------------|
@@ -188,7 +188,7 @@ Lists all buckets.
 **Example**
 
 ```go
-buckets, err := minioClient.ListBuckets(context.Background())
+buckets, err := obstorClient.ListBuckets(context.Background())
 if err != nil {
 	fmt.Println(err)
 	return
@@ -221,7 +221,7 @@ Checks if a bucket exists.
 **Example**
 
 ```go
-found, err := minioClient.BucketExists(context.Background(), "mybucket")
+found, err := obstorClient.BucketExists(context.Background(), "mybucket")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -247,7 +247,7 @@ Removes a bucket, bucket should be empty to be successfully removed.
 **Example**
 
 ```go
-err = minioClient.RemoveBucket(context.Background(), "mybucket")
+err = obstorClient.RemoveBucket(context.Background(), "mybucket")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -266,15 +266,15 @@ Lists objects in a bucket.
 |:-------------|:---------------------------|:----------------------------------------------------|
 | `ctx`        | *context.Context*          | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                   | Name of the bucket                                  |
-| `opts`       | *minio.ListObjectsOptions* | Options per to list objects                         |
+| `opts`       | *obstor.ListObjectsOptions* | Options per to list objects                         |
 
 **Return Value**
 
 | Param        | Type                    | Description                                                                           |
 |:-------------|:------------------------|:--------------------------------------------------------------------------------------|
-| `objectInfo` | *chan minio.ObjectInfo* | Read channel for all objects in the bucket, the object is of the format listed below: |
+| `objectInfo` | *chan obstor.ObjectInfo* | Read channel for all objects in the bucket, the object is of the format listed below: |
 
-**minio.ObjectInfo**
+**obstor.ObjectInfo**
 
 | Field                     | Type        | Description                        |
 |:--------------------------|:------------|:-----------------------------------|
@@ -288,7 +288,7 @@ ctx, cancel := context.WithCancel(context.Background())
 
 defer cancel()
 
-objectCh := minioClient.ListObjects(ctx, "mybucket", minio.ListObjectsOptions{
+objectCh := obstorClient.ListObjects(ctx, "mybucket", obstor.ListObjectsOptions{
 	Prefix:    "myprefix",
 	Recursive: true,
 })
@@ -313,23 +313,23 @@ Lists objects in a bucket using an iterator. This is a modern Go 1.23+ alternati
 |:-------------|:---------------------------|:----------------------------------------------------|
 | `ctx`        | *context.Context*          | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                   | Name of the bucket                                  |
-| `opts`       | *minio.ListObjectsOptions* | Options to list objects                             |
+| `opts`       | *obstor.ListObjectsOptions* | Options to list objects                             |
 
 **Return Value**
 
 | Param      | Type                         | Description                         |
 |:-----------|:-----------------------------|:------------------------------------|
-| `iterator` | *iter.Seq[minio.ObjectInfo]* | Iterator yielding ObjectInfo values |
+| `iterator` | *iter.Seq[obstor.ObjectInfo]* | Iterator yielding ObjectInfo values |
 
 **Example**
 
 ```go
-opts := minio.ListObjectsOptions{
+opts := obstor.ListObjectsOptions{
 	Prefix:    "myprefix",
 	Recursive: true,
 }
 
-for object := range minioClient.ListObjectsIter(context.Background(), "mybucket", opts) {
+for object := range obstorClient.ListObjectsIter(context.Background(), "mybucket", opts) {
 	if object.Err != nil {
 		fmt.Println(object.Err)
 		return
@@ -357,9 +357,9 @@ Lists partially uploaded objects in a bucket.
 
 | Param           | Type                             | Description                                         |
 |:----------------|:---------------------------------|:----------------------------------------------------|
-| `multiPartInfo` | *chan minio.ObjectMultipartInfo* | Emits multipart objects of the format listed below: |
+| `multiPartInfo` | *chan obstor.ObjectMultipartInfo* | Emits multipart objects of the format listed below: |
 
-**minio.ObjectMultipartInfo**
+**obstor.ObjectMultipartInfo**
 
 | Field                       | Type     | Description                               |
 |:----------------------------|:---------|:------------------------------------------|
@@ -371,7 +371,7 @@ Lists partially uploaded objects in a bucket.
 
 ```go
 isRecursive := true // Recursively list everything at 'myprefix'
-multiPartObjectCh := minioClient.ListIncompleteUploads(context.Background(), "mybucket", "myprefix", isRecursive)
+multiPartObjectCh := obstorClient.ListIncompleteUploads(context.Background(), "mybucket", "myprefix", isRecursive)
 for multiPartObject := range multiPartObjectCh {
 	if multiPartObject.Err != nil {
 		fmt.Println(multiPartObject.Err)
@@ -407,7 +407,7 @@ if err != nil {
 	log.Fatalln(err)
 }
 
-err = minioClient.SetBucketTagging(context.Background(), "my-bucketname", tags)
+err = obstorClient.SetBucketTagging(context.Background(), "my-bucketname", tags)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -435,7 +435,7 @@ Gets tags of a bucket.
 **Example**
 
 ```go
-tags, err := minioClient.GetBucketTagging(context.Background(), "my-bucketname")
+tags, err := obstorClient.GetBucketTagging(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -459,7 +459,7 @@ Removes all tags on a bucket.
 **Example**
 
 ```go
-err := minioClient.RemoveBucketTagging(context.Background(), "my-bucketname")
+err := obstorClient.RemoveBucketTagging(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -471,19 +471,19 @@ if err != nil {
 
 ### AppendObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts AppendObjectOptions) (UploadInfo, error)
 
-**Parameters** |Param | Type | Description | |:--- | :--- | :--- | |`ctx` | *context.Context* | Custom Context for timeout/cancellation of the call| |`bucketName`| *string* | Name of bucket | |`objectName`| *string* | Name of Object | |`reader` | *io.Reader* | standard Reader Interface | |`objectSize` | *int64* | Size of the object | |`opts` | *minio.AppendObjectOptions* | Additional Options for Append Operation|
+**Parameters** |Param | Type | Description | |:--- | :--- | :--- | |`ctx` | *context.Context* | Custom Context for timeout/cancellation of the call| |`bucketName`| *string* | Name of bucket | |`objectName`| *string* | Name of Object | |`reader` | *io.Reader* | standard Reader Interface | |`objectSize` | *int64* | Size of the object | |`opts` | *obstor.AppendObjectOptions* | Additional Options for Append Operation|
 
-**Return Value** |Param | Type | Description | |:--- | :--- | :--- | |`info`| *minio.UploadInfo* | Information about the newly uploaded or copied object | |`err`| *error* | Standard error |
+**Return Value** |Param | Type | Description | |:--- | :--- | :--- | |`info`| *obstor.UploadInfo* | Information about the newly uploaded or copied object | |`err`| *error* | Standard error |
 
-**minio.AppendObjectOptions** | Field | Type | Description | |:--- | :--- | :--- | |`opts.Progress`| *io.Reader* | A progress reader to indicate progress| |`opts.ChunkSize`| *uint64* | Maximum Append Size | |`opts.DisableContentSha256`| *bool* | Aggressively disable sha256 payload. |
+**obstor.AppendObjectOptions** | Field | Type | Description | |:--- | :--- | :--- | |`opts.Progress`| *io.Reader* | A progress reader to indicate progress| |`opts.ChunkSize`| *uint64* | Maximum Append Size | |`opts.DisableContentSha256`| *bool* | Aggressively disable sha256 payload. |
 
-**minio.UploadInfo** | Field | Type | Description | | :--- | :--- | :--- | | `info.Bucket` | *string* | Name of bucket | | `info.Key` | *string* | Name of object | | `info.ETag` | *string* | MD5 checksum of the object | | `info.Size` | *string* | Size of object |
+**obstor.UploadInfo** | Field | Type | Description | | :--- | :--- | :--- | | `info.Bucket` | *string* | Name of bucket | | `info.Key` | *string* | Name of object | | `info.ETag` | *string* | MD5 checksum of the object | | `info.Size` | *string* | Size of object |
 
 **Example**
 
 ```go
-opt := minio.AppendObjectOptions{}
-info, err := minio.AppendObject(context.Background(), "my-bucket-name", "my-object-name", my_progress_reader, size, opt)
+opt := obstor.AppendObjectOptions{}
+info, err := obstor.AppendObject(context.Background(), "my-bucket-name", "my-object-name", my_progress_reader, size, opt)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -502,25 +502,25 @@ Returns a stream of the object data. Most of the common errors occur when readin
 | `ctx`        | *context.Context*        | Custom context for timeout/cancellation of the call                              |
 | `bucketName` | *string*                 | Name of the bucket                                                               |
 | `objectName` | *string*                 | Name of the object                                                               |
-| `opts`       | *minio.GetObjectOptions* | Options for GET requests specifying additional options like encryption, If-Match |
+| `opts`       | *obstor.GetObjectOptions* | Options for GET requests specifying additional options like encryption, If-Match |
 
-**minio.GetObjectOptions**
+**obstor.GetObjectOptions**
 
 | Field                       | Type                       | Description                                                                                                                                           |
 |:----------------------------|:---------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opts.ServerSideEncryption` | *encrypt.ServerSide*       | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/minio/minio-go/v7\) |
-| `opts.Internal`             | *minio.AdvancedGetOptions* | This option is intended for internal use by MinIO server. This option should not be set unless the application is aware of intended use.              |
+| `opts.ServerSideEncryption` | *encrypt.ServerSide*       | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/obstor/obstor-go/v7\) |
+| `opts.Internal`             | *obstor.AdvancedGetOptions* | This option is intended for internal use by Obstor server. This option should not be set unless the application is aware of intended use.              |
 
 **Return Value**
 
 | Param    | Type             | Description                                                                                                        |
 |:---------|:-----------------|:-------------------------------------------------------------------------------------------------------------------|
-| `object` | \**minio.Object* | *minio.Object* represents object reader. It implements io.Reader, io.Seeker, io.ReaderAt and io.Closer interfaces. |
+| `object` | \**obstor.Object* | *obstor.Object* represents object reader. It implements io.Reader, io.Seeker, io.ReaderAt and io.Closer interfaces. |
 
 **Example**
 
 ```go
-object, err := minioClient.GetObject(context.Background(), "mybucket", "myobject", minio.GetObjectOptions{})
+object, err := obstorClient.GetObject(context.Background(), "mybucket", "myobject", obstor.GetObjectOptions{})
 if err != nil {
 	fmt.Println(err)
 	return
@@ -554,12 +554,12 @@ Downloads and saves the object as a file in the local filesystem.
 | `bucketName` | *string*                 | Name of the bucket                                                               |
 | `objectName` | *string*                 | Name of the object                                                               |
 | `filePath`   | *string*                 | Path to download object to                                                       |
-| `opts`       | *minio.GetObjectOptions* | Options for GET requests specifying additional options like encryption, If-Match |
+| `opts`       | *obstor.GetObjectOptions* | Options for GET requests specifying additional options like encryption, If-Match |
 
 **Example**
 
 ```go
-err = minioClient.FGetObject(context.Background(), "mybucket", "myobject", "/tmp/myobject", minio.GetObjectOptions{})
+err = obstorClient.FGetObject(context.Background(), "mybucket", "myobject", "/tmp/myobject", obstor.GetObjectOptions{})
 if err != nil {
 	fmt.Println(err)
 	return
@@ -579,18 +579,18 @@ A variant of PutObject instead of writing a single object from a single stream m
 | `ctx`        | *context.Context*              | Custom context for timeout/cancellation of the call                   |
 | `bucketName` | *string*                       | Name of the bucket                                                    |
 | `fanOutData` | *io.Reader*                    | Any Go type that implements io.Reader                                 |
-| `fanOutReq`  | *minio.PutObjectFanOutRequest* | User input list of all the objects that will be created on the server |
+| `fanOutReq`  | *obstor.PutObjectFanOutRequest* | User input list of all the objects that will be created on the server |
 |              |                                |                                                                       |
 
-**minio.PutObjectFanOutRequest**
+**obstor.PutObjectFanOutRequest**
 
 | Field       | Type                            | Description                                |
 |:------------|:--------------------------------|:-------------------------------------------|
-| `Entries`   | *[]minio.PutObjectFanOutEntyry* | List of object fan out entries             |
+| `Entries`   | *[]obstor.PutObjectFanOutEntyry* | List of object fan out entries             |
 | `Checksums` | *map[string]string*             | Checksums for the input data               |
 | `SSE`       | _encrypt.ServerSide             | Encryption settings for the entire fan-out |
 
-**minio.PutObjectFanOutEntry**
+**obstor.PutObjectFanOutEntry**
 
 | Field                | Type                  | Description                                                                                        |
 |:---------------------|:----------------------|:---------------------------------------------------------------------------------------------------|
@@ -602,10 +602,10 @@ A variant of PutObject instead of writing a single object from a single stream m
 | `ContentDisposition` | *string*              | Content disposition of object, "inline"                                                            |
 | `ContentLanguage`    | *string*              | Content language of object, e.g "French"                                                           |
 | `CacheControl`       | *string*              | Used to specify directives for caching mechanisms in both requests and responses e.g "max-age=600" |
-| `Retention`          | *minio.RetentionMode* | Retention mode to be set, e.g "COMPLIANCE"                                                         |
+| `Retention`          | *obstor.RetentionMode* | Retention mode to be set, e.g "COMPLIANCE"                                                         |
 | `RetainUntilDate`    | *time.Time*           | Time until which the retention applied is valid                                                    |
 
-**minio.PutObjectFanOutResponse**
+**obstor.PutObjectFanOutResponse**
 
 | Field          | Type       | Description                                                     |
 |:---------------|:-----------|:----------------------------------------------------------------|
@@ -630,9 +630,9 @@ Uploads objects that are less than 128MiB in a single PUT operation. For objects
 | `objectName` | *string*                 | Name of the object                                                                                                                  |
 | `reader`     | *io.Reader*              | Any Go type that implements io.Reader                                                                                               |
 | `objectSize` | *int64*                  | Size of the object being uploaded. Pass -1 if stream size is unknown (Warning: passing -1 will allocate a large amount of memory)   |
-| `opts`       | *minio.PutObjectOptions* | Allows user to set optional custom metadata, content headers, encryption keys and number of threads for multipart upload operation. |
+| `opts`       | *obstor.PutObjectOptions* | Allows user to set optional custom metadata, content headers, encryption keys and number of threads for multipart upload operation. |
 
-**minio.PutObjectOptions**
+**obstor.PutObjectOptions**
 
 | Field                          | Type                       | Description                                                                                                                                                                        |
 |:-------------------------------|:---------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -644,17 +644,17 @@ Uploads objects that are less than 128MiB in a single PUT operation. For objects
 | `opts.ContentDisposition`      | *string*                   | Content disposition of object, "inline"                                                                                                                                            |
 | `opts.ContentLanguage`         | *string*                   | Content language of object, e.g "French"                                                                                                                                           |
 | `opts.CacheControl`            | *string*                   | Used to specify directives for caching mechanisms in both requests and responses e.g "max-age=600"                                                                                 |
-| `opts.Mode`                    | \**minio.RetentionMode*    | Retention mode to be set, e.g "COMPLIANCE"                                                                                                                                         |
+| `opts.Mode`                    | \**obstor.RetentionMode*    | Retention mode to be set, e.g "COMPLIANCE"                                                                                                                                         |
 | `opts.RetainUntilDate`         | \**time.Time*              | Time until which the retention applied is valid                                                                                                                                    |
-| `opts.ServerSideEncryption`    | *encrypt.ServerSide*       | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/minio/minio-go/v7\)                              |
-| `opts.StorageClass`            | *string*                   | Specify storage class for the object. Supported values for MinIO server are `REDUCED_REDUNDANCY` and `STANDARD`                                                                    |
+| `opts.ServerSideEncryption`    | *encrypt.ServerSide*       | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/obstor/obstor-go/v7\)                              |
+| `opts.StorageClass`            | *string*                   | Specify storage class for the object. Supported values for Obstor server are `REDUCED_REDUNDANCY` and `STANDARD`                                                                    |
 | `opts.WebsiteRedirectLocation` | *string*                   | Specify a redirect for the object, to another object in the same bucket or to a external URL.                                                                                      |
 | `opts.SendContentMd5`          | *bool*                     | Specify if you'd like to send `content-md5` header with PutObject operation. Note that setting this flag will cause higher memory usage because of in-memory `md5sum` calculation. |
 | `opts.PartSize`                | *uint64*                   | Specify a custom part size used for uploading the object                                                                                                                           |
-| `opts.Internal`                | *minio.AdvancedPutOptions* | This option is intended for internal use by MinIO server and should not be set unless the application is aware of intended use.                                                    |
+| `opts.Internal`                | *obstor.AdvancedPutOptions* | This option is intended for internal use by Obstor server and should not be set unless the application is aware of intended use.                                                    |
 |                                |                            |                                                                                                                                                                                    |
 
-**minio.UploadInfo**
+**obstor.UploadInfo**
 
 | Field            | Type     | Description                              |
 |:-----------------|:---------|:-----------------------------------------|
@@ -677,7 +677,7 @@ if err != nil {
 	return
 }
 
-uploadInfo, err := minioClient.PutObject(context.Background(), "mybucket", "myobject", file, fileStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+uploadInfo, err := obstorClient.PutObject(context.Background(), "mybucket", "myobject", file, fileStat.Size(), obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 if err != nil {
 	fmt.Println(err)
 	return
@@ -685,7 +685,7 @@ if err != nil {
 fmt.Println("Successfully uploaded bytes: ", uploadInfo)
 ```
 
-API methods PutObjectWithSize, PutObjectWithMetadata, PutObjectStreaming, and PutObjectWithProgress available in minio-go SDK release v3.0.3 are replaced by the new PutObject call variant that accepts a pointer to PutObjectOptions struct.
+API methods PutObjectWithSize, PutObjectWithMetadata, PutObjectStreaming, and PutObjectWithProgress available in obstor-go SDK release v3.0.3 are replaced by the new PutObject call variant that accepts a pointer to PutObjectOptions struct.
 
 <a name="CopyObject"></a>
 
@@ -700,10 +700,10 @@ To copy multiple source objects into a single destination object see the `Compos
 | Param | Type                    | Description                                         |
 |:------|:------------------------|:----------------------------------------------------|
 | `ctx` | *context.Context*       | Custom context for timeout/cancellation of the call |
-| `dst` | *minio.CopyDestOptions* | Argument describing the destination object          |
-| `src` | *minio.CopySrcOptions*  | Argument describing the source object               |
+| `dst` | *obstor.CopyDestOptions* | Argument describing the destination object          |
+| `src` | *obstor.CopySrcOptions*  | Argument describing the source object               |
 
-**minio.UploadInfo**
+**obstor.UploadInfo**
 
 | Field            | Type     | Description                              |
 |:-----------------|:---------|:-----------------------------------------|
@@ -715,19 +715,19 @@ To copy multiple source objects into a single destination object see the `Compos
 ```go
 // Use-case 1: Simple copy object with no conditions.
 // Source object
-srcOpts := minio.CopySrcOptions{
+srcOpts := obstor.CopySrcOptions{
 	Bucket: "my-sourcebucketname",
 	Object: "my-sourceobjectname",
 }
 
 // Destination object
-dstOpts := minio.CopyDestOptions{
+dstOpts := obstor.CopyDestOptions{
 	Bucket: "my-bucketname",
 	Object: "my-objectname",
 }
 
 // Copy object call
-uploadInfo, err := minioClient.CopyObject(context.Background(), dstOpts, srcOpts)
+uploadInfo, err := obstorClient.CopyObject(context.Background(), dstOpts, srcOpts)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -745,7 +745,7 @@ fmt.Println("Successfully copied object:", uploadInfo)
 // 4. copy only first 1MiB of object.
 
 // Source object
-srcOpts := minio.CopySrcOptions{
+srcOpts := obstor.CopySrcOptions{
 	Bucket:               "my-sourcebucketname",
 	Object:               "my-sourceobjectname",
 	MatchETag:            "31624deb84149d2f8ef9c385918b653a",
@@ -756,13 +756,13 @@ srcOpts := minio.CopySrcOptions{
 }
 
 // Destination object
-dstOpts := minio.CopyDestOptions{
+dstOpts := obstor.CopyDestOptions{
 	Bucket: "my-bucketname",
 	Object: "my-objectname",
 }
 
 // Copy object call
-_, err = minioClient.CopyObject(context.Background(), dstOpts, srcOpts)
+_, err = obstorClient.CopyObject(context.Background(), dstOpts, srcOpts)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -774,7 +774,7 @@ fmt.Println("Successfully copied object:", uploadInfo)
 
 <a name="ComposeObject"></a>
 
-### ComposeObject(ctx context.Context, dst minio.CopyDestOptions, srcs ...minio.CopySrcOptions) (UploadInfo, error)
+### ComposeObject(ctx context.Context, dst obstor.CopyDestOptions, srcs ...obstor.CopySrcOptions) (UploadInfo, error)
 
 Create an object by concatenating a list of source objects using server-side copying.
 
@@ -783,10 +783,10 @@ Create an object by concatenating a list of source objects using server-side cop
 | Param  | Type                      | Description                                                                 |
 |:-------|:--------------------------|:----------------------------------------------------------------------------|
 | `ctx`  | *context.Context*         | Custom context for timeout/cancellation of the call                         |
-| `dst`  | *minio.CopyDestOptions*   | Struct with info about the object to be created.                            |
-| `srcs` | *...minio.CopySrcOptions* | Slice of struct with info about source objects to be concatenated in order. |
+| `dst`  | *obstor.CopyDestOptions*   | Struct with info about the object to be created.                            |
+| `srcs` | *...obstor.CopySrcOptions* | Slice of struct with info about source objects to be concatenated in order. |
 
-**minio.UploadInfo**
+**obstor.UploadInfo**
 
 | Field            | Type     | Description                              |
 |:-----------------|:---------|:-----------------------------------------|
@@ -802,21 +802,21 @@ sseSrc := encrypt.DefaultPBKDF([]byte("password"), []byte("salt"))
 
 // Source objects to concatenate. We also specify decryption
 // key for each
-src1Opts := minio.CopySrcOptions{
+src1Opts := obstor.CopySrcOptions{
 	Bucket:     "bucket1",
 	Object:     "object1",
 	Encryption: sseSrc,
 	MatchETag:  "31624deb84149d2f8ef9c385918b653a",
 }
 
-src2Opts := minio.CopySrcOptions{
+src2Opts := obstor.CopySrcOptions{
 	Bucket:     "bucket2",
 	Object:     "object2",
 	Encryption: sseSrc,
 	MatchETag:  "f8ef9c385918b653a31624deb84149d2",
 }
 
-src3Opts := minio.CopySrcOptions{
+src3Opts := obstor.CopySrcOptions{
 	Bucket:     "bucket3",
 	Object:     "object3",
 	Encryption: sseSrc,
@@ -834,7 +834,7 @@ dstOpts := CopyDestOptions{
 }
 
 // Compose object call by concatenating multiple source files.
-uploadInfo, err := minioClient.ComposeObject(context.Background(), dst, srcs...)
+uploadInfo, err := obstorClient.ComposeObject(context.Background(), dst, srcs...)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -859,9 +859,9 @@ FPutObject uploads objects that are less than 128MiB in a single PUT operation. 
 | `bucketName` | *string*                 | Name of the bucket                                                                                                                                                                                                                                                                          |
 | `objectName` | *string*                 | Name of the object                                                                                                                                                                                                                                                                          |
 | `filePath`   | *string*                 | Path to file to be uploaded                                                                                                                                                                                                                                                                 |
-| `opts`       | *minio.PutObjectOptions* | Pointer to struct that allows user to set optional custom metadata, content-type, content-encoding, content-disposition, content-language and cache-control headers, pass encryption module for encrypting objects, and optionally configure number of threads for multipart put operation. |
+| `opts`       | *obstor.PutObjectOptions* | Pointer to struct that allows user to set optional custom metadata, content-type, content-encoding, content-disposition, content-language and cache-control headers, pass encryption module for encrypting objects, and optionally configure number of threads for multipart put operation. |
 
-**minio.UploadInfo**
+**obstor.UploadInfo**
 
 | Field            | Type     | Description                              |
 |:-----------------|:---------|:-----------------------------------------|
@@ -871,7 +871,7 @@ FPutObject uploads objects that are less than 128MiB in a single PUT operation. 
 **Example**
 
 ```go
-uploadInfo, err := minioClient.FPutObject(context.Background(), "my-bucketname", "my-objectname", "my-filename.csv", minio.PutObjectOptions{
+uploadInfo, err := obstorClient.FPutObject(context.Background(), "my-bucketname", "my-objectname", "my-filename.csv", obstor.PutObjectOptions{
 	ContentType: "application/csv",
 })
 if err != nil {
@@ -894,15 +894,15 @@ Fetch metadata of an object.
 | `ctx`        | *context.Context*         | Custom context for timeout/cancellation of the call                                        |
 | `bucketName` | *string*                  | Name of the bucket                                                                         |
 | `objectName` | *string*                  | Name of the object                                                                         |
-| `opts`       | *minio.StatObjectOptions* | Options for GET info/stat requests specifying additional options like encryption, If-Match |
+| `opts`       | *obstor.StatObjectOptions* | Options for GET info/stat requests specifying additional options like encryption, If-Match |
 
 **Return Value**
 
 | Param     | Type               | Description             |
 |:----------|:-------------------|:------------------------|
-| `objInfo` | *minio.ObjectInfo* | Object stat information |
+| `objInfo` | *obstor.ObjectInfo* | Object stat information |
 
-**minio.ObjectInfo**
+**obstor.ObjectInfo**
 
 | Field                  | Type        | Description                        |
 |:-----------------------|:------------|:-----------------------------------|
@@ -914,7 +914,7 @@ Fetch metadata of an object.
 **Example**
 
 ```go
-objInfo, err := minioClient.StatObject(context.Background(), "mybucket", "myobject", minio.StatObjectOptions{})
+objInfo, err := obstorClient.StatObject(context.Background(), "mybucket", "myobject", obstor.StatObjectOptions{})
 if err != nil {
 	fmt.Println(err)
 	return
@@ -924,7 +924,7 @@ fmt.Println(objInfo)
 
 <a name="RemoveObject"></a>
 
-### RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
+### RemoveObject(ctx context.Context, bucketName, objectName string, opts obstor.RemoveObjectOptions) error
 
 Removes an object with some specified options
 
@@ -935,22 +935,22 @@ Removes an object with some specified options
 | `ctx`        | *context.Context*           | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                    | Name of the bucket                                  |
 | `objectName` | *string*                    | Name of the object                                  |
-| `opts`       | *minio.RemoveObjectOptions* | Allows user to set options                          |
+| `opts`       | *obstor.RemoveObjectOptions* | Allows user to set options                          |
 
-**minio.RemoveObjectOptions**
+**obstor.RemoveObjectOptions**
 
 | Field                   | Type                          | Description                                                                                                                     |
 |:------------------------|:------------------------------|:--------------------------------------------------------------------------------------------------------------------------------|
 | `opts.GovernanceBypass` | *bool*                        | Set the bypass governance header to delete an object locked with GOVERNANCE mode                                                |
 | `opts.VersionID`        | *string*                      | Version ID of the object to delete                                                                                              |
-| `opts.Internal`         | *minio.AdvancedRemoveOptions* | This option is intended for internal use by MinIO server and should not be set unless the application is aware of intended use. |
+| `opts.Internal`         | *obstor.AdvancedRemoveOptions* | This option is intended for internal use by Obstor server and should not be set unless the application is aware of intended use. |
 
 ```go
-opts := minio.RemoveObjectOptions{
+opts := obstor.RemoveObjectOptions{
 	GovernanceBypass: true,
 	VersionID:        "myversionid",
 }
-err = minioClient.RemoveObject(context.Background(), "mybucket", "myobject", opts)
+err = obstorClient.RemoveObject(context.Background(), "mybucket", "myobject", opts)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -959,7 +959,7 @@ if err != nil {
 
 <a name="PutObjectRetention"></a>
 
-### PutObjectRetention(ctx context.Context, bucketName, objectName string, opts minio.PutObjectRetentionOptions) error
+### PutObjectRetention(ctx context.Context, bucketName, objectName string, opts obstor.PutObjectRetentionOptions) error
 
 Applies object retention lock onto an object.
 
@@ -970,7 +970,7 @@ Applies object retention lock onto an object.
 | `ctx`        | *context.Context*                 | Custom context for timeout/cancellation of the call                        |
 | `bucketName` | *string*                          | Name of the bucket                                                         |
 | `objectName` | *string*                          | Name of the object                                                         |
-| `opts`       | *minio.PutObjectRetentionOptions* | Allows user to set options like retention mode, expiry date and version id |
+| `opts`       | *obstor.PutObjectRetentionOptions* | Allows user to set options like retention mode, expiry date and version id |
 
 <a name="RemoveObjects"></a>
 
@@ -984,10 +984,10 @@ Parameters
 |:-------------|:-----------------------------|:----------------------------------------------------|
 | `ctx`        | *context.Context*            | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                     | Name of the bucket                                  |
-| `objectsCh`  | *chan minio.ObjectInfo*      | Channel of objects to be removed                    |
-| `opts`       | *minio.RemoveObjectsOptions* | Allows user to set options                          |
+| `objectsCh`  | *chan obstor.ObjectInfo*      | Channel of objects to be removed                    |
+| `opts`       | *obstor.RemoveObjectsOptions* | Allows user to set options                          |
 
-**minio.RemoveObjectsOptions**
+**obstor.RemoveObjectsOptions**
 
 | Field                   | Type   | Description                                                                      |
 |:------------------------|:-------|:---------------------------------------------------------------------------------|
@@ -997,16 +997,16 @@ Parameters
 
 | Param     | Type                             | Description                                              |
 |:----------|:---------------------------------|:---------------------------------------------------------|
-| `errorCh` | *<-chan minio.RemoveObjectError* | Receive-only channel of errors observed during deletion. |
+| `errorCh` | *<-chan obstor.RemoveObjectError* | Receive-only channel of errors observed during deletion. |
 
 ```go
-objectsCh := make(chan minio.ObjectInfo)
+objectsCh := make(chan obstor.ObjectInfo)
 
 // Send object names that are needed to be removed to objectsCh
 go func() {
 	defer close(objectsCh)
 	// List all objects from a bucket-name with a matching prefix.
-	for object := range minioClient.ListObjects(context.Background(), "my-bucketname", "my-prefixname", true, nil) {
+	for object := range obstorClient.ListObjects(context.Background(), "my-bucketname", "my-prefixname", true, nil) {
 		if object.Err != nil {
 			log.Fatalln(object.Err)
 		}
@@ -1014,11 +1014,11 @@ go func() {
 	}
 }()
 
-opts := minio.RemoveObjectsOptions{
+opts := obstor.RemoveObjectsOptions{
 	GovernanceBypass: true,
 }
 
-for rErr := range minioClient.RemoveObjects(context.Background(), "my-bucketname", objectsCh, opts) {
+for rErr := range obstorClient.RemoveObjects(context.Background(), "my-bucketname", objectsCh, opts) {
 	fmt.Println("Error detected during deletion: ", rErr)
 }
 ```
@@ -1035,16 +1035,16 @@ Removes a list of objects and returns both successful deletions and errors. This
 |:-------------|:-----------------------------|:----------------------------------------------------|
 | `ctx`        | *context.Context*            | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                     | Name of the bucket                                  |
-| `objectsCh`  | *chan minio.ObjectInfo*      | Channel of objects to be removed                    |
-| `opts`       | *minio.RemoveObjectsOptions* | Allows user to set options                          |
+| `objectsCh`  | *chan obstor.ObjectInfo*      | Channel of objects to be removed                    |
+| `opts`       | *obstor.RemoveObjectsOptions* | Allows user to set options                          |
 
 **Return Values**
 
 | Param      | Type                              | Description                                            |
 |:-----------|:----------------------------------|:-------------------------------------------------------|
-| `resultCh` | *<-chan minio.RemoveObjectResult* | Channel of results including both successes and errors |
+| `resultCh` | *<-chan obstor.RemoveObjectResult* | Channel of results including both successes and errors |
 
-**minio.RemoveObjectResult**
+**obstor.RemoveObjectResult**
 
 | Field        | Type     | Description                               |
 |:-------------|:---------|:------------------------------------------|
@@ -1055,11 +1055,11 @@ Removes a list of objects and returns both successful deletions and errors. This
 **Example**
 
 ```go
-objectsCh := make(chan minio.ObjectInfo)
+objectsCh := make(chan obstor.ObjectInfo)
 
 go func() {
 	defer close(objectsCh)
-	for object := range minioClient.ListObjects(context.Background(), "my-bucketname", minio.ListObjectsOptions{Prefix: "my-prefixname", Recursive: true}) {
+	for object := range obstorClient.ListObjects(context.Background(), "my-bucketname", obstor.ListObjectsOptions{Prefix: "my-prefixname", Recursive: true}) {
 		if object.Err != nil {
 			log.Fatalln(object.Err)
 		}
@@ -1067,13 +1067,13 @@ go func() {
 	}
 }()
 
-opts := minio.RemoveObjectsOptions{
+opts := obstor.RemoveObjectsOptions{
 	GovernanceBypass: true,
 }
 
 successCount := 0
 errorCount := 0
-for result := range minioClient.RemoveObjectsWithResult(context.Background(), "my-bucketname", objectsCh, opts) {
+for result := range obstorClient.RemoveObjectsWithResult(context.Background(), "my-bucketname", objectsCh, opts) {
 	if result.Err != nil {
 		fmt.Printf("Error deleting %s: %v\n", result.ObjectName, result.Err)
 		errorCount++
@@ -1097,29 +1097,29 @@ Iterator-based version of RemoveObjects for Go 1.23+. Removes objects using an i
 |:--------------|:-----------------------------|:----------------------------------------------------|
 | `ctx`         | *context.Context*            | Custom context for timeout/cancellation of the call |
 | `bucketName`  | *string*                     | Name of the bucket                                  |
-| `objectsIter` | *iter.Seq[minio.ObjectInfo]* | Iterator of objects to be removed                   |
-| `opts`        | *minio.RemoveObjectsOptions* | Allows user to set options                          |
+| `objectsIter` | *iter.Seq[obstor.ObjectInfo]* | Iterator of objects to be removed                   |
+| `opts`        | *obstor.RemoveObjectsOptions* | Allows user to set options                          |
 
 **Return Values**
 
 | Param        | Type                                 | Description                          |
 |:-------------|:-------------------------------------|:-------------------------------------|
-| `resultIter` | *iter.Seq[minio.RemoveObjectResult]* | Iterator yielding removal results    |
+| `resultIter` | *iter.Seq[obstor.RemoveObjectResult]* | Iterator yielding removal results    |
 | `err`        | *error*                              | Error initializing removal operation |
 
 **Example**
 
 ```go
-opts := minio.ListObjectsOptions{
+opts := obstor.ListObjectsOptions{
 	Prefix:    "my-prefixname",
 	Recursive: true,
 }
 
-removeOpts := minio.RemoveObjectsOptions{
+removeOpts := obstor.RemoveObjectsOptions{
 	GovernanceBypass: true,
 }
 
-for err := range minioClient.RemoveObjectsWithIter(context.Background(), "my-bucketname", minioClient.ListObjectsIter(context.Background(), "my-bucketname", opts), removeOpts) {
+for err := range obstorClient.RemoveObjectsWithIter(context.Background(), "my-bucketname", obstorClient.ListObjectsIter(context.Background(), "my-bucketname", opts), removeOpts) {
 	fmt.Printf("Error detected during deletion: %v\n", err)
 }
 ```
@@ -1140,7 +1140,7 @@ Returns retention set on a given object.
 | `versionID`  | *string*          | Version ID of the object                            |
 
 ```go
-mode, retainUntilDate, err := minioClient.GetObjectRetention(context.Background(), "mybucket", "myobject", "")
+mode, retainUntilDate, err := obstorClient.GetObjectRetention(context.Background(), "mybucket", "myobject", "")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1150,7 +1150,7 @@ fmt.Printf("Retention mode: %v, Retain until: %v\n", mode, retainUntilDate)
 
 <a name="PutObjectLegalHold"></a>
 
-### PutObjectLegalHold(ctx context.Context, bucketName, objectName string, opts minio.PutObjectLegalHoldOptions) error
+### PutObjectLegalHold(ctx context.Context, bucketName, objectName string, opts obstor.PutObjectLegalHoldOptions) error
 
 Applies legal-hold onto an object.
 
@@ -1161,21 +1161,21 @@ Applies legal-hold onto an object.
 | `ctx`        | *context.Context*                 | Custom context for timeout/cancellation of the call   |
 | `bucketName` | *string*                          | Name of the bucket                                    |
 | `objectName` | *string*                          | Name of the object                                    |
-| `opts`       | *minio.PutObjectLegalHoldOptions* | Allows user to set options like status and version id |
+| `opts`       | *obstor.PutObjectLegalHoldOptions* | Allows user to set options like status and version id |
 
-*minio.PutObjectLegalHoldOptions*
+*obstor.PutObjectLegalHoldOptions*
 
 | Field            | Type                      | Description                                    |
 |:-----------------|:--------------------------|:-----------------------------------------------|
-| `opts.Status`    | \**minio.LegalHoldStatus* | Legal-Hold status to be set                    |
+| `opts.Status`    | \**obstor.LegalHoldStatus* | Legal-Hold status to be set                    |
 | `opts.VersionID` | *string*                  | Version ID of the object to apply retention on |
 
 ```go
-s := minio.LegalHoldEnabled
-opts := minio.PutObjectLegalHoldOptions{
+s := obstor.LegalHoldEnabled
+opts := obstor.PutObjectLegalHoldOptions{
 	Status: &s,
 }
-err = minioClient.PutObjectLegalHold(context.Background(), "mybucket", "myobject", opts)
+err = obstorClient.PutObjectLegalHold(context.Background(), "mybucket", "myobject", opts)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1195,11 +1195,11 @@ Returns legal-hold status on a given object.
 | `ctx`        | *context.Context*                 | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                          | Name of the bucket                                  |
 | `objectName` | *string*                          | Name of the object                                  |
-| `opts`       | *minio.GetObjectLegalHoldOptions* | Allows user to set options like version id          |
+| `opts`       | *obstor.GetObjectLegalHoldOptions* | Allows user to set options like version id          |
 
 ```go
-opts := minio.GetObjectLegalHoldOptions{}
-err = minioClient.GetObjectLegalHold(context.Background(), "mybucket", "myobject", opts)
+opts := obstor.GetObjectLegalHoldOptions{}
+err = obstorClient.GetObjectLegalHold(context.Background(), "mybucket", "myobject", opts)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1227,25 +1227,25 @@ Parameters
 | `SelectResults` | *SelectResults* | Is an io.ReadCloser object which can be directly passed to csv.NewReader for processing output. |
 
 ```go
-	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, &minio.Options{
+	// Initialize obstor client object.
+	obstorClient, err := obstor.New(endpoint, &obstor.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
 	})
 
-	opts := minio.SelectObjectOptions{
+	opts := obstor.SelectObjectOptions{
 		Expression:     "select count(*) from s3object",
-		ExpressionType: minio.QueryExpressionTypeSQL,
-		InputSerialization: minio.SelectObjectInputSerialization{
-			CompressionType: minio.SelectCompressionNONE,
-			CSV: &minio.CSVInputOptions{
-				FileHeaderInfo:  minio.CSVFileHeaderInfoNone,
+		ExpressionType: obstor.QueryExpressionTypeSQL,
+		InputSerialization: obstor.SelectObjectInputSerialization{
+			CompressionType: obstor.SelectCompressionNONE,
+			CSV: &obstor.CSVInputOptions{
+				FileHeaderInfo:  obstor.CSVFileHeaderInfoNone,
 				RecordDelimiter: "\n",
 				FieldDelimiter:  ",",
 			},
 		},
-		OutputSerialization: minio.SelectObjectOutputSerialization{
-			CSV: &minio.CSVOutputOptions{
+		OutputSerialization: obstor.SelectObjectOutputSerialization{
+			CSV: &obstor.CSVOutputOptions{
 				RecordDelimiter: "\n",
 				FieldDelimiter:  ",",
 			},
@@ -1281,7 +1281,7 @@ set new object Tags to the given object, replaces/overwrites any existing tags.
 **Example**
 
 ```go
-err = minioClient.PutObjectTagging(context.Background(), bucketName, objectName, objectTags)
+err = obstorClient.PutObjectTagging(context.Background(), bucketName, objectName, objectTags)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1305,7 +1305,7 @@ Fetch Object Tags from the given object
 **Example**
 
 ```go
-tags, err = minioClient.GetObjectTagging(context.Background(), bucketName, objectName)
+tags, err = obstorClient.GetObjectTagging(context.Background(), bucketName, objectName)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1330,7 +1330,7 @@ Remove Object Tags from the given object
 **Example**
 
 ```go
-err = minioClient.RemoveObjectTagging(context.Background(), bucketName, objectName)
+err = obstorClient.RemoveObjectTagging(context.Background(), bucketName, objectName)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1339,7 +1339,7 @@ if err != nil {
 
 <a name="RestoreObject"></a>
 
-### RestoreObject(ctx context.Context, bucketName, objectName, versionID string, opts minio.RestoreRequest) error
+### RestoreObject(ctx context.Context, bucketName, objectName, versionID string, opts obstor.RestoreRequest) error
 
 Restore or perform SQL operations on an archived object
 
@@ -1351,14 +1351,14 @@ Restore or perform SQL operations on an archived object
 | `bucketName` | *string*              | Name of the bucket                                  |
 | `objectName` | *string*              | Name of the object                                  |
 | `versionID`  | *string*              | Version ID of the object                            |
-| `opts`       | _minio.RestoreRequest | Restore request options                             |
+| `opts`       | _obstor.RestoreRequest | Restore request options                             |
 
 **Example**
 
 ```go
-opts := minio.RestoreRequest{}
+opts := obstor.RestoreRequest{}
 opts.SetDays(1)
-opts.SetGlacierJobParameters(minio.GlacierJobParameters{Tier: minio.TierStandard})
+opts.SetGlacierJobParameters(obstor.GlacierJobParameters{Tier: obstor.TierStandard})
 
 err = s3Client.RestoreObject(context.Background(), "your-bucket", "your-object", "", opts)
 if err != nil {
@@ -1379,13 +1379,13 @@ Returns a stream of the object data. Most of the common errors occur when readin
 | `ctx`        | *context.Context*               | Custom context for timeout/cancellation of the call             |
 | `bucketName` | *string*                        | Name of the bucket                                              |
 | `objectName` | *string*                        | Name of the object                                              |
-| `opts`       | *minio.ObjectAttributesOptions* | Configuration for pagination and selection of object attributes |
+| `opts`       | *obstor.ObjectAttributesOptions* | Configuration for pagination and selection of object attributes |
 
-**minio.ObjectAttributesOptions**
+**obstor.ObjectAttributesOptions**
 
 | Field                       | Type                 | Description                                                                                                                                                 |
 |:----------------------------|:---------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opts.ServerSideEncryption` | *encrypt.ServerSide* | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/minio/minio-go/v7\)       |
+| `opts.ServerSideEncryption` | *encrypt.ServerSide* | Interface provided by `encrypt` package to specify server-side-encryption. (For more information see https://godoc.org/github.com/obstor/obstor-go/v7\)       |
 | `opts.MaxParts`             | _int                 | This option defines how many parts should be returned by the API                                                                                            |
 | `opts.VersionID`            | _string              | VersionID defines which version of the object will be used                                                                                                  |
 | `opts.PartNumberMarker`     | _int                 | This options defines which part number pagination will start after, the part which number is equal to PartNumberMarker will not be included in the response |
@@ -1394,7 +1394,7 @@ Returns a stream of the object data. Most of the common errors occur when readin
 
 | Param              | Type                       | Description                                                                        |
 |:-------------------|:---------------------------|:-----------------------------------------------------------------------------------|
-| `objectAttributes` | \**minio.ObjectAttributes* | *minio.ObjectAttributes* contains the information about the object and it's parts. |
+| `objectAttributes` | \**obstor.ObjectAttributes* | *obstor.ObjectAttributes* contains the information about the object and it's parts. |
 
 **Example**
 
@@ -1403,7 +1403,7 @@ objectAttributes, err := c.GetObjectAttributes(
 	context.Background(),
 	"your-bucket",
 	"your-object",
-	minio.ObjectAttributesOptions{
+	obstor.ObjectAttributesOptions{
 		VersionID:      "object-version-id",
 		NextPartMarker: 0,
 		MaxParts:       100,
@@ -1434,7 +1434,7 @@ Removes a partially uploaded object.
 **Example**
 
 ```go
-err = minioClient.RemoveIncompleteUpload(context.Background(), "mybucket", "myobject")
+err = obstorClient.RemoveIncompleteUpload(context.Background(), "mybucket", "myobject")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1467,7 +1467,7 @@ reqParams := make(url.Values)
 reqParams.Set("response-content-disposition", "attachment; filename=\"your-filename.txt\"")
 
 // Generates a presigned url which expires in a day.
-presignedURL, err := minioClient.PresignedGetObject(context.Background(), "mybucket", "myobject", time.Second*24*60*60, reqParams)
+presignedURL, err := obstorClient.PresignedGetObject(context.Background(), "mybucket", "myobject", time.Second*24*60*60, reqParams)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1497,7 +1497,7 @@ NOTE: you can upload to S3 only with specified object name.
 ```go
 // Generates a url which expires in a day.
 expiry := time.Second * 24 * 60 * 60 // 1 day.
-presignedURL, err := minioClient.PresignedPutObject(context.Background(), "mybucket", "myobject", expiry)
+presignedURL, err := obstorClient.PresignedPutObject(context.Background(), "mybucket", "myobject", expiry)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1529,7 +1529,7 @@ reqParams := make(url.Values)
 reqParams.Set("response-content-disposition", "attachment; filename=\"your-filename.txt\"")
 
 // Generates a presigned url which expires in a day.
-presignedURL, err := minioClient.PresignedHeadObject(context.Background(), "mybucket", "myobject", time.Second*24*60*60, reqParams)
+presignedURL, err := obstorClient.PresignedHeadObject(context.Background(), "mybucket", "myobject", time.Second*24*60*60, reqParams)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1545,7 +1545,7 @@ Allows setting policy conditions to a presigned URL for POST operations. Policie
 
 ```go
 // Initialize policy condition config.
-policy := minio.NewPostPolicy()
+policy := obstor.NewPostPolicy()
 
 // Apply upload policy restrictions:
 policy.SetBucket("mybucket")
@@ -1562,7 +1562,7 @@ policy.SetContentLengthRange(1024, 1024*1024)
 policy.SetUserMetadata("custom", "user")
 
 // Get the POST form key/value object:
-url, formData, err := minioClient.PresignedPostPolicy(context.Background(), policy)
+url, formData, err := obstorClient.PresignedPostPolicy(context.Background(), policy)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1604,7 +1604,7 @@ Set access permissions on bucket or an object prefix.
 ```go
 policy := `{"Version": "2012-10-17","Statement": [{"Action": ["s3:GetObject"],"Effect": "Allow","Principal": {"AWS": ["*"]},"Resource": ["arn:aws:s3:::my-bucketname/*"],"Sid": ""}]}`
 
-err = minioClient.SetBucketPolicy(context.Background(), "my-bucketname", policy)
+err = obstorClient.SetBucketPolicy(context.Background(), "my-bucketname", policy)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1634,7 +1634,7 @@ Get access permissions on a bucket or a prefix.
 **Example**
 
 ```go
-policy, err := minioClient.GetBucketPolicy(context.Background(), "my-bucketname")
+policy, err := obstorClient.GetBucketPolicy(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -1663,7 +1663,7 @@ Get notification configuration on a bucket.
 **Example**
 
 ```go
-bucketNotification, err := minioClient.GetBucketNotification(context.Background(), "mybucket")
+bucketNotification, err := obstorClient.GetBucketNotification(context.Background(), "mybucket")
 if err != nil {
 	fmt.Println("Failed to get bucket notification configurations for mybucket", err)
 	return
@@ -1702,14 +1702,14 @@ Set a new bucket notification on a bucket.
 queueArn := notification.NewArn("aws", "sqs", "us-east-1", "804605494417", "PhotoUpdate")
 
 queueConfig := notification.NewConfig(queueArn)
-queueConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+queueConfig.AddEvents(obstor.ObjectCreatedAll, obstor.ObjectRemovedAll)
 queueConfig.AddFilterPrefix("photos/")
 queueConfig.AddFilterSuffix(".jpg")
 
 config := notification.Configuration{}
 config.AddQueue(queueConfig)
 
-err = minioClient.SetBucketNotification(context.Background(), "mybucket", config)
+err = obstorClient.SetBucketNotification(context.Background(), "mybucket", config)
 if err != nil {
 	fmt.Println("Unable to set the bucket notification: ", err)
 	return
@@ -1738,7 +1738,7 @@ Remove all configured bucket notifications on a bucket.
 **Example**
 
 ```go
-err = minioClient.RemoveAllBucketNotification(context.Background(), "mybucket")
+err = obstorClient.RemoveAllBucketNotification(context.Background(), "mybucket")
 if err != nil {
 	fmt.Println("Unable to remove bucket notifications.", err)
 	return
@@ -1771,7 +1771,7 @@ NOTE: Notification channel is closed at the first occurrence of an error.
 |:-------------------|:-------------------------|:--------------------------------|
 | `notificationInfo` | *chan notification.Info* | Channel of bucket notifications |
 
-**minio.NotificationInfo**
+**obstor.NotificationInfo**
 
 |Field |Type |Description | |`notificationInfo.Records` | *[]notification.Event* | Collection of notification events | |`notificationInfo.Err` | *error* | Carries any error occurred during the operation (Standard Error) |
 
@@ -1779,7 +1779,7 @@ NOTE: Notification channel is closed at the first occurrence of an error.
 
 ```go
 // Listen for bucket notifications on "mybucket" filtered by prefix, suffix and events.
-for notificationInfo := range minioClient.ListenBucketNotification(context.Background(), "mybucket", "myprefix/", ".mysuffix", []string{
+for notificationInfo := range obstorClient.ListenBucketNotification(context.Background(), "mybucket", "myprefix/", ".mysuffix", []string{
 	"s3:ObjectCreated:*",
 	"s3:ObjectAccessed:*",
 	"s3:ObjectRemoved:*",
@@ -1817,7 +1817,7 @@ NOTE: Notification channel is closed at the first occurrence of an error.
 |:-------------------|:-------------------------|:-----------------------------------|
 | `notificationInfo` | *chan notification.Info* | Read channel for all notifications |
 
-**minio.NotificationInfo**
+**obstor.NotificationInfo**
 
 |Field |Type |Description | |`notificationInfo.Records` | *[]notification.Event* | Collection of notification events | |`notificationInfo.Err` | *error* | Carries any error occurred during the operation (Standard Error) |
 
@@ -1825,7 +1825,7 @@ NOTE: Notification channel is closed at the first occurrence of an error.
 
 ```go
 // Listen for bucket notifications on "mybucket" filtered by prefix, suffix and events.
-for notificationInfo := range minioClient.ListenNotification(context.Background(), "myprefix/", ".mysuffix", []string{
+for notificationInfo := range obstorClient.ListenNotification(context.Background(), "myprefix/", ".mysuffix", []string{
 	"s3:BucketCreated:*",
 	"s3:BucketRemoved:*",
 	"s3:ObjectCreated:*",
@@ -1873,7 +1873,7 @@ config.Rules = []lifecycle.Rule{
 	},
 }
 
-err = minioClient.SetBucketLifecycle(context.Background(), "my-bucketname", config)
+err = obstorClient.SetBucketLifecycle(context.Background(), "my-bucketname", config)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -1903,7 +1903,7 @@ Get lifecycle on a bucket or a prefix.
 **Example**
 
 ```go
-lifecycle, err := minioClient.GetBucketLifecycle(context.Background(), "my-bucketname")
+lifecycle, err := obstorClient.GetBucketLifecycle(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -1932,7 +1932,7 @@ Set default encryption configuration on a bucket.
 **Example**
 
 ```go
-s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 	Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 	Secure: true,
 })
@@ -1970,7 +1970,7 @@ Get default encryption configuration set on a bucket.
 **Example**
 
 ```go
-s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 	Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 	Secure: true,
 })
@@ -2044,7 +2044,7 @@ mode := Governance
 validity := uint(30)
 unit := Days
 
-err = minioClient.SetObjectLockConfig(context.Background(), "my-bucketname", &mode, &validity, &unit)
+err = obstorClient.SetObjectLockConfig(context.Background(), "my-bucketname", &mode, &validity, &unit)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -2077,7 +2077,7 @@ Get object lock configuration of given bucket.
 **Example**
 
 ```go
-enabled, mode, validity, unit, err := minioClient.GetObjectLockConfig(context.Background(), "my-bucketname")
+enabled, mode, validity, unit, err := obstorClient.GetObjectLockConfig(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2111,7 +2111,7 @@ Enable bucket versioning support.
 **Example**
 
 ```go
-err := minioClient.EnableVersioning(context.Background(), "my-bucketname")
+err := obstorClient.EnableVersioning(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2141,7 +2141,7 @@ Suspend bucket versioning support.
 **Example**
 
 ```go
-err := minioClient.SuspendVersioning(context.Background(), "my-bucketname")
+err := obstorClient.SuspendVersioning(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2166,13 +2166,13 @@ Get versioning configuration set on a bucket.
 
 | Param           | Type                                  | Description                                   |
 |:----------------|:--------------------------------------|:----------------------------------------------|
-| `configuration` | *minio.BucketVersioningConfiguration* | Structure that holds versioning configuration |
+| `configuration` | *obstor.BucketVersioningConfiguration* | Structure that holds versioning configuration |
 | `err`           | *error*                               | Standard Error                                |
 
 **Example**
 
 ```go
-s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 	Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 	Secure: true,
 })
@@ -2192,7 +2192,7 @@ fmt.Printf("%+v\n", versioningConfig)
 
 ### SetBucketReplication(ctx context.Context, bucketName string, cfg replication.Config) error
 
-Set replication configuration on a bucket. Role can be obtained by first defining the replication target on MinIO using `mc admin bucket remote set` to associate the source and destination buckets for replication with the replication endpoint.
+Set replication configuration on a bucket. Role can be obtained by first defining the replication target on Obstor using `mc admin bucket remote set` to associate the source and destination buckets for replication with the replication endpoint.
 
 **Parameters**
 
@@ -2246,8 +2246,8 @@ replicationConfig := replication.Config{}
 if err := xml.Unmarshal([]byte(replicationStr), &replicationConfig); err != nil {
 	log.Fatalln(err)
 }
-replicationConfig.Role = "arn:minio:s3::598361bf-3cec-49a7-b529-ce870a34d759:*"
-err = minioClient.SetBucketReplication(context.Background(), "my-bucketname", replicationConfig)
+replicationConfig.Role = "arn:obstor:s3::598361bf-3cec-49a7-b529-ce870a34d759:*"
+err = obstorClient.SetBucketReplication(context.Background(), "my-bucketname", replicationConfig)
 if err != nil {
 	fmt.Println(err)
 	return
@@ -2277,7 +2277,7 @@ Get current replication config on a bucket.
 **Example**
 
 ```go
-replication, err := minioClient.GetBucketReplication(context.Background(), "my-bucketname")
+replication, err := obstorClient.GetBucketReplication(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2305,7 +2305,7 @@ Removes replication configuration on a bucket.
 **Example**
 
 ```go
-err = minioClient.RemoveBucketReplication(context.Background(), "my-bucketname")
+err = obstorClient.RemoveBucketReplication(context.Background(), "my-bucketname")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -2316,7 +2316,7 @@ if err != nil {
 
 ### CancelBucketReplicationResync(ctx context.Context, bucketName string, tgtArn string) (id string, err error)
 
-Cancels in progress replication resync (MinIO AiStor Only API)
+Cancels in progress replication resync (Obstor Only API)
 
 **Parameters**
 
@@ -2331,7 +2331,7 @@ Cancels in progress replication resync (MinIO AiStor Only API)
 **Example**
 
 ```go
-id, err := minioClient.CancelBucketReplicationResync(context.Background(), "my-bucket-name", "my-target-arn")
+id, err := obstorClient.CancelBucketReplicationResync(context.Background(), "my-bucket-name", "my-target-arn")
 if err != nil {
 	fmt.Println(err)
 	return
@@ -2342,7 +2342,7 @@ if err != nil {
 
 ### GetBucketReplicationMetrics(ctx context.Context, bucketName string) (replication.Metrics, error)
 
-Get latest replication metrics on a bucket. This is a MinIO specific extension.
+Get latest replication metrics on a bucket. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -2361,7 +2361,7 @@ Get latest replication metrics on a bucket. This is a MinIO specific extension.
 **Example**
 
 ```go
-replMetrics, err := minioClient.GetBucketReplicationMetrics(context.Background(), "my-bucketname")
+replMetrics, err := obstorClient.GetBucketReplicationMetrics(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2371,7 +2371,7 @@ if err != nil {
 
 ### GetBucketReplicationMetricsV2(ctx context.Context, bucketName string) (replication.MetricsV2, error)
 
-Get latest replication metrics using the V2 API on a bucket. This is a MinIO specific extension with enhanced metrics.
+Get latest replication metrics using the V2 API on a bucket. This is a Obstor specific extension with enhanced metrics.
 
 **Parameters**
 
@@ -2390,7 +2390,7 @@ Get latest replication metrics using the V2 API on a bucket. This is a MinIO spe
 **Example**
 
 ```go
-replMetrics, err := minioClient.GetBucketReplicationMetricsV2(context.Background(), "my-bucketname")
+replMetrics, err := obstorClient.GetBucketReplicationMetricsV2(context.Background(), "my-bucketname")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2401,7 +2401,7 @@ fmt.Printf("Replication metrics: %+v\n", replMetrics)
 
 ### CheckBucketReplication(ctx context.Context, bucketName string) error
 
-Validate whether replication is properly configured for a bucket. This is a MinIO specific extension.
+Validate whether replication is properly configured for a bucket. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -2419,7 +2419,7 @@ Validate whether replication is properly configured for a bucket. This is a MinI
 **Example**
 
 ```go
-err := minioClient.CheckBucketReplication(context.Background(), "my-bucketname")
+err := obstorClient.CheckBucketReplication(context.Background(), "my-bucketname")
 if err != nil {
 	log.Printf("Replication configuration is invalid: %v\n", err)
 } else {
@@ -2431,7 +2431,7 @@ if err != nil {
 
 ### ResetBucketReplication(ctx context.Context, bucketName string, olderThan time.Duration) (string, error)
 
-Initiate replication of previously replicated objects. Requires ExistingObjectReplication to be enabled in the replication configuration. This is a MinIO specific extension.
+Initiate replication of previously replicated objects. Requires ExistingObjectReplication to be enabled in the replication configuration. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -2452,7 +2452,7 @@ Initiate replication of previously replicated objects. Requires ExistingObjectRe
 
 ```go
 // Reset replication for all objects
-resetID, err := minioClient.ResetBucketReplication(context.Background(), "my-bucketname", 0)
+resetID, err := obstorClient.ResetBucketReplication(context.Background(), "my-bucketname", 0)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2463,7 +2463,7 @@ fmt.Printf("Replication reset initiated with ID: %s\n", resetID)
 
 ### ResetBucketReplicationOnTarget(ctx context.Context, bucketName string, olderThan time.Duration, tgtArn string) (replication.ResyncTargetsInfo, error)
 
-Initiate replication of previously replicated objects to a specific target. Requires ExistingObjectReplication to be enabled in the replication configuration. This is a MinIO specific extension.
+Initiate replication of previously replicated objects to a specific target. Requires ExistingObjectReplication to be enabled in the replication configuration. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -2484,7 +2484,7 @@ Initiate replication of previously replicated objects to a specific target. Requ
 **Example**
 
 ```go
-resyncInfo, err := minioClient.ResetBucketReplicationOnTarget(context.Background(), "my-bucketname", 0, "arn:aws:s3:::target-bucket")
+resyncInfo, err := obstorClient.ResetBucketReplicationOnTarget(context.Background(), "my-bucketname", 0, "arn:aws:s3:::target-bucket")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2495,7 +2495,7 @@ fmt.Printf("Resync info: %+v\n", resyncInfo)
 
 ### GetBucketReplicationResyncStatus(ctx context.Context, bucketName, arn string) (replication.ResyncTargetsInfo, error)
 
-Retrieve the status of a replication resync operation. This is a MinIO specific extension.
+Retrieve the status of a replication resync operation. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -2516,7 +2516,7 @@ Retrieve the status of a replication resync operation. This is a MinIO specific 
 
 ```go
 // Get resync status for all targets
-resyncInfo, err := minioClient.GetBucketReplicationResyncStatus(context.Background(), "my-bucketname", "")
+resyncInfo, err := obstorClient.GetBucketReplicationResyncStatus(context.Background(), "my-bucketname", "")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2542,7 +2542,7 @@ Add custom application details to User-Agent.
 
 ```go
 // Set Application name and version to be used in subsequent API requests.
-minioClient.SetAppInfo("myCloudApp", "1.0.0")
+obstorClient.SetAppInfo("myCloudApp", "1.0.0")
 ```
 
 <a name="TraceOn"></a>
@@ -2590,7 +2590,7 @@ Returns the URL of the S3-compatible endpoint that this client connects to. Retu
 **Example**
 
 ```go
-endpointURL := minioClient.EndpointURL()
+endpointURL := obstorClient.EndpointURL()
 fmt.Printf("Connected to: %s\n", endpointURL.String())
 ```
 
@@ -2610,7 +2610,7 @@ Returns the current credentials being used by the client. Useful for debugging o
 **Example**
 
 ```go
-creds, err := minioClient.GetCreds()
+creds, err := obstorClient.GetCreds()
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2647,7 +2647,7 @@ corsConfig := &cors.Config{
 	}},
 }
 
-err := minioClient.SetBucketCors(context.Background(), "mybucket", corsConfig)
+err := obstorClient.SetBucketCors(context.Background(), "mybucket", corsConfig)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2677,7 +2677,7 @@ Get CORS configuration of a bucket.
 **Example**
 
 ```go
-corsConfig, err := minioClient.GetBucketCors(context.Background(), "mybucket")
+corsConfig, err := obstorClient.GetBucketCors(context.Background(), "mybucket")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2688,7 +2688,7 @@ fmt.Printf("CORS configuration: %+v\n", corsConfig)
 
 ### GetBucketQOS(ctx context.Context, bucket string) (*QOSConfig, error)
 
-Get Quality of Service (QoS) configuration for a bucket. This is a MinIO-specific API.
+Get Quality of Service (QoS) configuration for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2707,7 +2707,7 @@ Get Quality of Service (QoS) configuration for a bucket. This is a MinIO-specifi
 **Example**
 
 ```go
-qosConfig, err := minioClient.GetBucketQOS(context.Background(), "mybucket")
+qosConfig, err := obstorClient.GetBucketQOS(context.Background(), "mybucket")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2718,7 +2718,7 @@ fmt.Printf("QoS configuration: %+v\n", qosConfig)
 
 ### SetBucketQOS(ctx context.Context, bucket string, qosCfg *QOSConfig) error
 
-Set Quality of Service (QoS) configuration for a bucket. This is a MinIO-specific API.
+Set Quality of Service (QoS) configuration for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2731,9 +2731,9 @@ Set Quality of Service (QoS) configuration for a bucket. This is a MinIO-specifi
 **Example**
 
 ```go
-qosConfig := &minio.QOSConfig{
+qosConfig := &obstor.QOSConfig{
 	Version: "v1",
-	Rules: []minio.QOSRule{{
+	Rules: []obstor.QOSRule{{
 		ID:           "rule1",
 		Priority:     1,
 		ObjectPrefix: "logs/",
@@ -2744,7 +2744,7 @@ qosConfig := &minio.QOSConfig{
 	}},
 }
 
-err := minioClient.SetBucketQOS(context.Background(), "mybucket", qosConfig)
+err := obstorClient.SetBucketQOS(context.Background(), "mybucket", qosConfig)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2754,7 +2754,7 @@ if err != nil {
 
 ### GetBucketQOSMetrics(ctx context.Context, bucketName, nodeName string) ([]QOSNodeStats, error)
 
-Get Quality of Service (QoS) metrics for a bucket. This is a MinIO-specific API.
+Get Quality of Service (QoS) metrics for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2775,7 +2775,7 @@ Get Quality of Service (QoS) metrics for a bucket. This is a MinIO-specific API.
 
 ```go
 // Get QoS metrics for all nodes
-metrics, err := minioClient.GetBucketQOSMetrics(context.Background(), "mybucket", "")
+metrics, err := obstorClient.GetBucketQOSMetrics(context.Background(), "mybucket", "")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2788,7 +2788,7 @@ for _, nodeStats := range metrics {
 
 ### GenerateInventoryConfigYAML(ctx context.Context, bucket, id string) (string, error)
 
-Generate a YAML template for an inventory configuration. This is a MinIO-specific API.
+Generate a YAML template for an inventory configuration. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2808,7 +2808,7 @@ Generate a YAML template for an inventory configuration. This is a MinIO-specifi
 **Example**
 
 ```go
-yamlTemplate, err := minioClient.GenerateInventoryConfigYAML(context.Background(), "mybucket", "inventory1")
+yamlTemplate, err := obstorClient.GenerateInventoryConfigYAML(context.Background(), "mybucket", "inventory1")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2819,7 +2819,7 @@ fmt.Println(yamlTemplate)
 
 ### PutBucketInventoryConfiguration(ctx context.Context, bucket, id, yamlDef string, opts ...InventoryPutConfigOption) error
 
-Create or update an inventory configuration for a bucket. This is a MinIO-specific API.
+Create or update an inventory configuration for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2843,7 +2843,7 @@ schedule:
   frequency: Daily
 ...`
 
-err := minioClient.PutBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1", yamlDef)
+err := obstorClient.PutBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1", yamlDef)
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2853,7 +2853,7 @@ if err != nil {
 
 ### GetBucketInventoryConfiguration(ctx context.Context, bucket, id string) (*InventoryConfiguration, error)
 
-Retrieve the inventory configuration for a bucket. This is a MinIO-specific API.
+Retrieve the inventory configuration for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2873,7 +2873,7 @@ Retrieve the inventory configuration for a bucket. This is a MinIO-specific API.
 **Example**
 
 ```go
-config, err := minioClient.GetBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1")
+config, err := obstorClient.GetBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2884,7 +2884,7 @@ fmt.Printf("Inventory: %+v\n", config)
 
 ### DeleteBucketInventoryConfiguration(ctx context.Context, bucket, id string) error
 
-Delete an inventory configuration from a bucket. This is a MinIO-specific API.
+Delete an inventory configuration from a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2897,7 +2897,7 @@ Delete an inventory configuration from a bucket. This is a MinIO-specific API.
 **Example**
 
 ```go
-err := minioClient.DeleteBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1")
+err := obstorClient.DeleteBucketInventoryConfiguration(context.Background(), "mybucket", "inventory1")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2907,7 +2907,7 @@ if err != nil {
 
 ### ListBucketInventoryConfigurations(ctx context.Context, bucket, continuationToken string) (*InventoryListResult, error)
 
-List up to 100 inventory configurations for a bucket with pagination support. This is a MinIO-specific API.
+List up to 100 inventory configurations for a bucket with pagination support. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -2927,7 +2927,7 @@ List up to 100 inventory configurations for a bucket with pagination support. Th
 **Example**
 
 ```go
-result, err := minioClient.ListBucketInventoryConfigurations(context.Background(), "mybucket", "")
+result, err := obstorClient.ListBucketInventoryConfigurations(context.Background(), "mybucket", "")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -2936,7 +2936,7 @@ for _, item := range result.Items {
 }
 if result.NextContinuationToken != "" {
 	// Fetch next page
-	nextResult, _ := minioClient.ListBucketInventoryConfigurations(context.Background(), "mybucket", result.NextContinuationToken)
+	nextResult, _ := obstorClient.ListBucketInventoryConfigurations(context.Background(), "mybucket", result.NextContinuationToken)
 }
 ```
 
@@ -2944,7 +2944,7 @@ if result.NextContinuationToken != "" {
 
 ### ListBucketInventoryConfigurationsIterator(ctx context.Context, bucket string) iter.Seq2[InventoryConfiguration, error]
 
-Return an iterator that lists all inventory configurations for a bucket. This is a MinIO-specific API. Requires Go 1.23+.
+Return an iterator that lists all inventory configurations for a bucket. This is a Obstor-specific API. Requires Go 1.23+.
 
 **Parameters**
 
@@ -2962,7 +2962,7 @@ Return an iterator that lists all inventory configurations for a bucket. This is
 **Example**
 
 ```go
-for config, err := range minioClient.ListBucketInventoryConfigurationsIterator(context.Background(), "mybucket") {
+for config, err := range obstorClient.ListBucketInventoryConfigurationsIterator(context.Background(), "mybucket") {
 	if err != nil {
 		log.Fatalln(err)
 		break
@@ -2975,7 +2975,7 @@ for config, err := range minioClient.ListBucketInventoryConfigurationsIterator(c
 
 ### GetBucketInventoryJobStatus(ctx context.Context, bucket, id string) (*InventoryJobStatus, error)
 
-Retrieve the status of an inventory job for a bucket. This is a MinIO-specific API.
+Retrieve the status of an inventory job for a bucket. This is a Obstor-specific API.
 
 **Parameters**
 
@@ -3026,7 +3026,7 @@ The `InventoryJobStatus` struct contains comprehensive job information:
 **Example**
 
 ```go
-status, err := minioClient.GetBucketInventoryJobStatus(context.Background(), "mybucket", "inventory1")
+status, err := obstorClient.GetBucketInventoryJobStatus(context.Background(), "mybucket", "inventory1")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -3063,8 +3063,8 @@ Bulk upload multiple objects using snowball archive method for efficient batch o
 |--------------|-------------------------------|-----------------------------------------------------|
 | `ctx`        | *context.Context*             | Custom context for timeout/cancellation of the call |
 | `bucketName` | *string*                      | Name of the bucket                                  |
-| `opts`       | *minio.SnowballOptions*       | Snowball upload options                             |
-| `objs`       | *<-chan minio.SnowballObject* | Channel of objects to upload                        |
+| `opts`       | *obstor.SnowballOptions*       | Snowball upload options                             |
+| `objs`       | *<-chan obstor.SnowballObject* | Channel of objects to upload                        |
 
 <a name="PromptObject"></a>
 
@@ -3080,7 +3080,7 @@ Perform language model inference with prompt and object context for AI/ML integr
 | `bucketName` | *string*                    | Name of the bucket                                  |
 | `objectName` | *string*                    | Name of the object                                  |
 | `prompt`     | *string*                    | AI prompt text                                      |
-| `opts`       | *minio.PromptObjectOptions* | Prompt operation options                            |
+| `opts`       | *obstor.PromptObjectOptions* | Prompt operation options                            |
 
 **Return Values**
 
@@ -3112,7 +3112,7 @@ Get the region/location constraint of a bucket.
 **Example**
 
 ```go
-location, err := minioClient.GetBucketLocation(context.Background(), "mybucket")
+location, err := obstorClient.GetBucketLocation(context.Background(), "mybucket")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -3123,7 +3123,7 @@ fmt.Printf("Bucket location: %s\n", location)
 
 ### GetBucketReplicationMetrics(ctx context.Context, bucketName string) (replication.Metrics, error)
 
-Get replication metrics for a bucket. This is a MinIO specific extension.
+Get replication metrics for a bucket. This is a Obstor specific extension.
 
 **Parameters**
 
@@ -3142,7 +3142,7 @@ Get replication metrics for a bucket. This is a MinIO specific extension.
 **Example**
 
 ```go
-metrics, err := minioClient.GetBucketReplicationMetrics(context.Background(), "mybucket")
+metrics, err := obstorClient.GetBucketReplicationMetrics(context.Background(), "mybucket")
 if err != nil {
 	log.Fatalln(err)
 }
@@ -3183,7 +3183,7 @@ Enable or disable S3 dual-stack endpoints which support both IPv4 and IPv6.
 
 ### IsOnline() bool
 
-Check if the MinIO client is online and can reach the server.
+Check if the Obstor client is online and can reach the server.
 
 **Return Value**
 
@@ -3195,7 +3195,7 @@ Check if the MinIO client is online and can reach the server.
 
 ### IsOffline() bool
 
-Check if the MinIO client is offline and cannot reach the server.
+Check if the Obstor client is offline and cannot reach the server.
 
 **Return Value**
 
@@ -3207,7 +3207,7 @@ Check if the MinIO client is offline and cannot reach the server.
 
 ### HealthCheck(hcDuration time.Duration) (context.CancelFunc, error)
 
-Start continuous health check monitoring of the MinIO server.
+Start continuous health check monitoring of the Obstor server.
 
 **Parameters**
 

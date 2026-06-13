@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func TestUpdateObjectEncryptionXMLMarshal(t *testing.T) {
@@ -34,7 +34,7 @@ func TestUpdateObjectEncryptionXMLMarshal(t *testing.T) {
 		XMLNS: "http://s3.amazonaws.com/doc/2006-03-01/",
 		SSEKMS: &updateObjectEncryptionSSEKMS{
 			BucketKeyEnabled: true,
-			KMSKeyArn:        "my-minio-key",
+			KMSKeyArn:        "my-obstor-key",
 		},
 	}
 
@@ -51,8 +51,8 @@ func TestUpdateObjectEncryptionXMLMarshal(t *testing.T) {
 	if decoded.SSEKMS == nil {
 		t.Fatal("Expected SSE-KMS element to be present")
 	}
-	if decoded.SSEKMS.KMSKeyArn != "my-minio-key" {
-		t.Fatalf("Expected KMSKeyArn 'my-minio-key', got %q", decoded.SSEKMS.KMSKeyArn)
+	if decoded.SSEKMS.KMSKeyArn != "my-obstor-key" {
+		t.Fatalf("Expected KMSKeyArn 'my-obstor-key', got %q", decoded.SSEKMS.KMSKeyArn)
 	}
 	if !decoded.SSEKMS.BucketKeyEnabled {
 		t.Fatal("Expected BucketKeyEnabled to be true")
@@ -63,7 +63,7 @@ func TestUpdateObjectEncryptionXMLMarshalNoBucketKey(t *testing.T) {
 	req := updateObjectEncryptionRequest{
 		XMLNS: "http://s3.amazonaws.com/doc/2006-03-01/",
 		SSEKMS: &updateObjectEncryptionSSEKMS{
-			KMSKeyArn: "my-minio-key",
+			KMSKeyArn: "my-obstor-key",
 		},
 	}
 
@@ -112,7 +112,7 @@ func TestUpdateObjectEncryptionSuccess(t *testing.T) {
 	}
 
 	opts := UpdateObjectEncryptionOptions{
-		KMSKeyArn:        "my-minio-key",
+		KMSKeyArn:        "my-obstor-key",
 		BucketKeyEnabled: true,
 		VersionID:        "test-version-id",
 	}
@@ -153,8 +153,8 @@ func TestUpdateObjectEncryptionSuccess(t *testing.T) {
 	if body.SSEKMS == nil {
 		t.Fatal("Expected SSE-KMS element in request body")
 	}
-	if body.SSEKMS.KMSKeyArn != "my-minio-key" {
-		t.Fatalf("Expected KMSKeyArn 'my-minio-key', got %q", body.SSEKMS.KMSKeyArn)
+	if body.SSEKMS.KMSKeyArn != "my-obstor-key" {
+		t.Fatalf("Expected KMSKeyArn 'my-obstor-key', got %q", body.SSEKMS.KMSKeyArn)
 	}
 	if !body.SSEKMS.BucketKeyEnabled {
 		t.Fatal("Expected BucketKeyEnabled to be true in request body")

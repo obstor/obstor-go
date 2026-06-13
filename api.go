@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -39,13 +39,13 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	md5simd "github.com/minio/md5-simd"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/kvcache"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio-go/v7/pkg/signer"
-	"github.com/minio/minio-go/v7/pkg/singleflight"
+	md5simd "github.com/obstor/md5-simd"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/kvcache"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/set"
+	"github.com/obstor/obstor-go/v7/pkg/signer"
+	"github.com/obstor/obstor-go/v7/pkg/singleflight"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -166,7 +166,7 @@ type Options struct {
 	// Set to 1 to disable retries.
 	MaxRetries int
 
-	// EnableRDMA causes PutObject / GetObject to dispatch to libminiocpp.so
+	// EnableRDMA causes PutObject / GetObject to dispatch to libobstorcpp.so
 	// when the caller supplies PutObjectOptions.RDMABuffer / GetObjectOptions.RDMABuffer.
 	// No-op unless built with -tags=rdma.
 	EnableRDMA bool
@@ -174,16 +174,16 @@ type Options struct {
 
 // Global constants.
 const (
-	libraryName    = "minio-go"
-	libraryVersion = "v7.0.98"
+	libraryName    = "obstor-go"
+	libraryVersion = "v7.1.0"
 )
 
 // User Agent should always following the below style.
 // Please open an issue to discuss any new changes here.
 //
-//	MinIO (OS; ARCH) LIB/VER APP/VER
+//	Obstor (OS; ARCH) LIB/VER APP/VER
 const (
-	libraryUserAgentPrefix = "MinIO (" + runtime.GOOS + "; " + runtime.GOARCH + ") "
+	libraryUserAgentPrefix = "Obstor (" + runtime.GOOS + "; " + runtime.GOARCH + ") "
 	libraryUserAgent       = libraryUserAgentPrefix + libraryName + "/" + libraryVersion
 )
 
@@ -197,7 +197,7 @@ const (
 	BucketLookupPath
 )
 
-// New - instantiate minio client with options
+// New - instantiate obstor client with options
 func New(endpoint string, opts *Options) (*Client, error) {
 	if opts == nil {
 		return nil, errors.New("no options provided")

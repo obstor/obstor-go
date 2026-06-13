@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
 	"io"
 	"net/http"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 // Core - Inherits Client and adds new methods to expose the low level S3 APIs.

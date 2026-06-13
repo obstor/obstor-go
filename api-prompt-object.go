@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -24,12 +24,12 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // PromptObject performs language model inference with the prompt and referenced object as context.
 // Inference is performed using a Lambda handler that can process the prompt and object.
-// Currently, this functionality is limited to certain MinIO servers.
+// Currently, this functionality is limited to certain Obstor servers.
 func (c *Client) PromptObject(ctx context.Context, bucketName, objectName, prompt string, opts PromptObjectOptions) (io.ReadCloser, error) {
 	// Input validation.
 	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
@@ -42,7 +42,7 @@ func (c *Client) PromptObject(ctx context.Context, bucketName, objectName, promp
 	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return nil, ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Code:       XMinioInvalidObjectName,
+			Code:       XObstorInvalidObjectName,
 			Message:    err.Error(),
 		}
 	}

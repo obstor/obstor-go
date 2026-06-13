@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func TestHealthCheck(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// New - instantiate minio client with options
+	// New - instantiate obstor client with options
 	clnt, err := New(srv.Listener.Addr().String(), &Options{
 		Region: "us-east-1",
 	})

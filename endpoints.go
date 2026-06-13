@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 type awsS3Endpoint struct {
 	endpoint          string

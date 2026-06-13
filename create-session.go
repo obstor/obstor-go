@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -27,9 +27,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/signer"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/signer"
 )
 
 // SessionMode - session mode type there are only two types

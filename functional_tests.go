@@ -50,12 +50,12 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/cors"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/notification"
-	"github.com/minio/minio-go/v7/pkg/tags"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/cors"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/notification"
+	"github.com/obstor/obstor-go/v7/pkg/tags"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz01234569"
@@ -78,23 +78,23 @@ const (
 	ignore2026Checksums = true
 )
 
-func ignore2026ChecksumError(cs minio.ChecksumType, err error) bool {
+func ignore2026ChecksumError(cs obstor.ChecksumType, err error) bool {
 	if !ignore2026Checksums {
 		return false
 	}
 	switch cs.Base() {
-	case minio.ChecksumMD5, minio.ChecksumSHA512,
-		minio.ChecksumXXHash64, minio.ChecksumXXHash3, minio.ChecksumXXHash128:
+	case obstor.ChecksumMD5, obstor.ChecksumSHA512,
+		obstor.ChecksumXXHash64, obstor.ChecksumXXHash3, obstor.ChecksumXXHash128:
 	default:
 		return false
 	}
-	var er minio.ErrorResponse
+	var er obstor.ErrorResponse
 	return errors.As(err, &er) && er.Code == "InvalidArgument"
 }
 
 func createHTTPTransport() (transport *http.Transport) {
 	var err error
-	transport, err = minio.DefaultTransport(mustParseBool(os.Getenv(enableHTTPS)))
+	transport, err = obstor.DefaultTransport(mustParseBool(os.Getenv(enableHTTPS)))
 	if err != nil {
 		logError("http-transport", getFuncName(), nil, time.Now(), "", "could not create http transport", err)
 		return nil
@@ -147,7 +147,7 @@ func baseLogger(testName, function string, args map[string]interface{}, startTim
 	duration := time.Since(startTime)
 	// log with the fields as per mint
 	l := slog.With(
-		"name", "minio-go: "+testName,
+		"name", "obstor-go: "+testName,
 		"duration", duration.Nanoseconds()/1000000,
 	)
 	if function != "" {
@@ -207,18 +207,18 @@ func logIgnored(testName, function string, args map[string]interface{}, startTim
 }
 
 // Delete objects in given bucket, recursively
-func cleanupBucket(bucketName string, c *minio.Client) error {
+func cleanupBucket(bucketName string, c *obstor.Client) error {
 	// Create a done channel to control 'ListObjectsV2' go routine.
 	doneCh := make(chan struct{})
 	// Exit cleanly upon return.
 	defer close(doneCh)
 	// Iterate over all objects in the bucket via listObjectsV2 and delete
-	for objCh := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{Recursive: true}) {
+	for objCh := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{Recursive: true}) {
 		if objCh.Err != nil {
 			return objCh.Err
 		}
 		if objCh.Key != "" {
-			err := c.RemoveObject(context.Background(), bucketName, objCh.Key, minio.RemoveObjectOptions{})
+			err := c.RemoveObject(context.Background(), bucketName, objCh.Key, obstor.RemoveObjectOptions{})
 			if err != nil {
 				return err
 			}
@@ -239,16 +239,16 @@ func cleanupBucket(bucketName string, c *minio.Client) error {
 	return c.RemoveBucket(context.Background(), bucketName)
 }
 
-func cleanupVersionedBucket(bucketName string, c *minio.Client) error {
+func cleanupVersionedBucket(bucketName string, c *obstor.Client) error {
 	doneCh := make(chan struct{})
 	defer close(doneCh)
-	for obj := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true}) {
+	for obj := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true}) {
 		if obj.Err != nil {
 			return obj.Err
 		}
 		if obj.Key != "" {
 			err := c.RemoveObject(context.Background(), bucketName, obj.Key,
-				minio.RemoveObjectOptions{VersionID: obj.VersionID, GovernanceBypass: true})
+				obstor.RemoveObjectOptions{VersionID: obj.VersionID, GovernanceBypass: true})
 			if err != nil {
 				return err
 			}
@@ -268,7 +268,7 @@ func cleanupVersionedBucket(bucketName string, c *minio.Client) error {
 	// objects are already deleted, clear the buckets now
 	err := c.RemoveBucket(context.Background(), bucketName)
 	if err != nil {
-		for obj := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true}) {
+		for obj := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true}) {
 			slog.Info("found object", "key", obj.Key, "version", obj.VersionID)
 		}
 	}
@@ -276,7 +276,7 @@ func cleanupVersionedBucket(bucketName string, c *minio.Client) error {
 }
 
 func isErrNotImplemented(err error) bool {
-	return minio.ToErrorResponse(err).Code == minio.NotImplemented
+	return obstor.ToErrorResponse(err).Code == obstor.NotImplemented
 }
 
 func isRunOnFail() bool {
@@ -285,9 +285,9 @@ func isRunOnFail() bool {
 
 func init() {
 	// If server endpoint is not set, all tests default to
-	// using https://play.min.io
+	// using https://demo.obstor.net
 	if os.Getenv(serverEndpoint) == "" {
-		os.Setenv(serverEndpoint, "play.min.io")
+		os.Setenv(serverEndpoint, "demo.obstor.net")
 		os.Setenv(accessKey, "Q3AM3UQ867SPQQA43P2F")
 		os.Setenv(secretKey, "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG")
 		os.Setenv(enableHTTPS, "1")
@@ -411,27 +411,27 @@ func getFuncNameLoc(caller int) string {
 }
 
 type ClientConfig struct {
-	// MinIO client configuration
+	// Obstor client configuration
 	TraceOn         bool // Turn on tracing of HTTP requests and responses to stderr
 	CredsV2         bool // Use V2 credentials if true, otherwise use v4
 	TrailingHeaders bool // Send trailing headers in requests
 }
 
-func NewClient(config ClientConfig) (*minio.Client, error) {
-	// Instantiate new MinIO client
+func NewClient(config ClientConfig) (*obstor.Client, error) {
+	// Instantiate new Obstor client
 	var creds *credentials.Credentials
 	if config.CredsV2 {
 		creds = credentials.NewStaticV2(os.Getenv(accessKey), os.Getenv(secretKey), "")
 	} else {
 		creds = credentials.NewStaticV4(os.Getenv(accessKey), os.Getenv(secretKey), "")
 	}
-	opts := &minio.Options{
+	opts := &obstor.Options{
 		Creds:           creds,
 		Transport:       createHTTPTransport(),
 		Secure:          mustParseBool(os.Getenv(enableHTTPS)),
 		TrailingHeaders: config.TrailingHeaders,
 	}
-	client, err := minio.New(os.Getenv(serverEndpoint), opts)
+	client, err := obstor.New(os.Getenv(serverEndpoint), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -441,7 +441,7 @@ func NewClient(config ClientConfig) (*minio.Client, error) {
 	}
 
 	// Set user agent.
-	client.SetAppInfo("MinIO-go-FunctionalTest", appVersion)
+	client.SetAppInfo("Obstor-go-FunctionalTest", appVersion)
 
 	return client, nil
 }
@@ -462,28 +462,28 @@ func testMakeBucketError() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket in 'eu-central-1'.
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: region}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: region}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket Failed", err)
 		return
 	}
 	defer cleanupBucket(bucketName, c)
 
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: region}); err == nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: region}); err == nil {
 		logError(testName, function, args, startTime, "", "Bucket already exists", err)
 		return
 	}
 	// Verify valid error response from server.
-	if minio.ToErrorResponse(err).Code != minio.BucketAlreadyExists &&
-		minio.ToErrorResponse(err).Code != minio.BucketAlreadyOwnedByYou {
+	if obstor.ToErrorResponse(err).Code != obstor.BucketAlreadyExists &&
+		obstor.ToErrorResponse(err).Code != obstor.BucketAlreadyOwnedByYou {
 		logError(testName, function, args, startTime, "", "Invalid error returned by server", err)
 		return
 	}
@@ -503,17 +503,17 @@ func testMetadataSizeLimit() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client creation failed", err)
 		return
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -529,7 +529,7 @@ func testMetadataSizeLimit() {
 	metadata["X-Amz-Meta-Mint-Test"] = string(bytes.Repeat([]byte("m"), 1+UserMetadataLimit-len("X-Amz-Meta-Mint-Test")))
 	args["metadata"] = fmt.Sprint(metadata)
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, minio.PutObjectOptions{UserMetadata: metadata})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, obstor.PutObjectOptions{UserMetadata: metadata})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "Created object with user-defined metadata exceeding metadata size limits", nil)
 		return
@@ -539,7 +539,7 @@ func testMetadataSizeLimit() {
 	metadata = make(map[string]string)
 	metadata["X-Amz-Mint-Test"] = string(bytes.Repeat([]byte("m"), 1+HeaderSizeLimit-len("X-Amz-Mint-Test")))
 	args["metadata"] = fmt.Sprint(metadata)
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, minio.PutObjectOptions{UserMetadata: metadata})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, obstor.PutObjectOptions{UserMetadata: metadata})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "Created object with headers exceeding header size limits", nil)
 		return
@@ -563,16 +563,16 @@ func testMakeBucketRegions() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket in 'eu-central-1'.
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: region}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: region}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
@@ -588,7 +588,7 @@ func testMakeBucketRegions() {
 	// virtual host style.
 	region = "us-west-2"
 	args["region"] = region
-	if err = c.MakeBucket(context.Background(), bucketName+".withperiod", minio.MakeBucketOptions{Region: region}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName+".withperiod", obstor.MakeBucketOptions{Region: region}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
@@ -615,16 +615,16 @@ func testPutObjectReadAt() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -644,14 +644,14 @@ func testPutObjectReadAt() {
 	objectContentType := "binary/octet-stream"
 	args["objectContentType"] = objectContentType
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: objectContentType})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: objectContentType})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Get Object failed", err)
 		return
@@ -699,16 +699,16 @@ func testListObjectVersions() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -727,7 +727,7 @@ func testListObjectVersions() {
 	bufSize := dataFileMap["datafile-10-kB"]
 	reader := getDataReader("datafile-10-kB")
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -736,14 +736,14 @@ func testListObjectVersions() {
 
 	bufSize = dataFileMap["datafile-1-b"]
 	reader = getDataReader("datafile-1-b")
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	reader.Close()
 
-	err = c.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName, obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Unexpected object deletion", err)
 		return
@@ -751,7 +751,7 @@ func testListObjectVersions() {
 
 	var deleteMarkers, versions int
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -804,16 +804,16 @@ func testStatObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -832,7 +832,7 @@ func testStatObjectWithVersioning() {
 	bufSize := dataFileMap["datafile-10-kB"]
 	reader := getDataReader("datafile-10-kB")
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -841,16 +841,16 @@ func testStatObjectWithVersioning() {
 
 	bufSize = dataFileMap["datafile-1-b"]
 	reader = getDataReader("datafile-1-b")
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	reader.Close()
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 
-	var results []minio.ObjectInfo
+	var results []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -865,7 +865,7 @@ func testStatObjectWithVersioning() {
 	}
 
 	for i := 0; i < len(results); i++ {
-		opts := minio.StatObjectOptions{VersionID: results[i].VersionID}
+		opts := obstor.StatObjectOptions{VersionID: results[i].VersionID}
 		statInfo, err := c.StatObject(context.Background(), bucketName, objectName, opts)
 		if err != nil {
 			logError(testName, function, args, startTime, "", "error during HEAD object", err)
@@ -907,16 +907,16 @@ func testGetObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -944,7 +944,7 @@ func testGetObjectWithVersioning() {
 			return
 		}
 		r.Close()
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
@@ -952,9 +952,9 @@ func testGetObjectWithVersioning() {
 		buffers = append(buffers, buf)
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 
-	var results []minio.ObjectInfo
+	var results []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -977,7 +977,7 @@ func testGetObjectWithVersioning() {
 	})
 
 	for i := 0; i < len(results); i++ {
-		opts := minio.GetObjectOptions{VersionID: results[i].VersionID}
+		opts := obstor.GetObjectOptions{VersionID: results[i].VersionID}
 		reader, err := c.GetObject(context.Background(), bucketName, objectName, opts)
 		if err != nil {
 			logError(testName, function, args, startTime, "", "error during  GET object", err)
@@ -1032,16 +1032,16 @@ func testPutObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1075,7 +1075,7 @@ func testPutObjectWithVersioning() {
 
 		go func(i int) {
 			defer wg.Done()
-			_, errs[i] = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{PartSize: 5 << 20})
+			_, errs[i] = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{PartSize: 5 << 20})
 		}(i)
 	}
 	wg.Wait()
@@ -1086,8 +1086,8 @@ func testPutObjectWithVersioning() {
 		}
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
-	var results []minio.ObjectInfo
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
+	var results []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", info.Err)
@@ -1110,7 +1110,7 @@ func testPutObjectWithVersioning() {
 	})
 
 	for i := 0; i < len(results); i++ {
-		opts := minio.GetObjectOptions{VersionID: results[i].VersionID}
+		opts := obstor.GetObjectOptions{VersionID: results[i].VersionID}
 		reader, err := c.GetObject(context.Background(), bucketName, objectName, opts)
 		if err != nil {
 			logError(testName, function, args, startTime, "", "error during  GET object", err)
@@ -1165,18 +1165,18 @@ func testListMultipartUpload() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
-	core := minio.Core{Client: c}
+	core := obstor.Core{Client: c}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
 	ctx := context.Background()
-	err = c.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(ctx, bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1188,7 +1188,7 @@ func testListMultipartUpload() {
 	}()
 	objName := "prefix/objectName"
 
-	want := minio.ListMultipartUploadsResult{
+	want := obstor.ListMultipartUploadsResult{
 		Bucket:             bucketName,
 		KeyMarker:          "",
 		UploadIDMarker:     "",
@@ -1202,12 +1202,12 @@ func testListMultipartUpload() {
 		CommonPrefixes:     nil,
 	}
 	for i := 0; i < 5; i++ {
-		uid, err := core.NewMultipartUpload(ctx, bucketName, objName, minio.PutObjectOptions{})
+		uid, err := core.NewMultipartUpload(ctx, bucketName, objName, obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "NewMultipartUpload failed", err)
 			return
 		}
-		want.Uploads = append(want.Uploads, minio.ObjectMultipartInfo{
+		want.Uploads = append(want.Uploads, obstor.ObjectMultipartInfo{
 			Initiated:    time.Time{},
 			StorageClass: "",
 			Key:          objName,
@@ -1217,7 +1217,7 @@ func testListMultipartUpload() {
 		})
 
 		for j := 0; j < 5; j++ {
-			cmpGot := func(call string, got minio.ListMultipartUploadsResult) bool {
+			cmpGot := func(call string, got obstor.ListMultipartUploadsResult) bool {
 				for i := range got.Uploads {
 					got.Uploads[i].Initiated = time.Time{}
 				}
@@ -1273,16 +1273,16 @@ func testCopyObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1306,15 +1306,15 @@ func testCopyObjectWithVersioning() {
 			return
 		}
 		r.Close()
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
 		}
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
-	var infos []minio.ObjectInfo
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
+	var infos []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1327,7 +1327,7 @@ func testCopyObjectWithVersioning() {
 		return infos[i].Size < infos[j].Size
 	})
 
-	reader, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{VersionID: infos[0].VersionID})
+	reader, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{VersionID: infos[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject of the oldest version content failed", err)
 		return
@@ -1340,14 +1340,14 @@ func testCopyObjectWithVersioning() {
 	}
 
 	// Copy Source
-	srcOpts := minio.CopySrcOptions{
+	srcOpts := obstor.CopySrcOptions{
 		Bucket:    bucketName,
 		Object:    objectName,
 		VersionID: infos[0].VersionID,
 	}
 	args["src"] = srcOpts
 
-	dstOpts := minio.CopyDestOptions{
+	dstOpts := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: objectName + "-copy",
 	}
@@ -1360,7 +1360,7 @@ func testCopyObjectWithVersioning() {
 	}
 
 	// Destination object
-	readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", minio.GetObjectOptions{})
+	readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -1396,16 +1396,16 @@ func testConcurrentCopyObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1429,15 +1429,15 @@ func testConcurrentCopyObjectWithVersioning() {
 			return
 		}
 		r.Close()
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
 		}
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
-	var infos []minio.ObjectInfo
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
+	var infos []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1450,7 +1450,7 @@ func testConcurrentCopyObjectWithVersioning() {
 		return infos[i].Size < infos[j].Size
 	})
 
-	reader, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{VersionID: infos[0].VersionID})
+	reader, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{VersionID: infos[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject of the oldest version content failed", err)
 		return
@@ -1463,14 +1463,14 @@ func testConcurrentCopyObjectWithVersioning() {
 	}
 
 	// Copy Source
-	srcOpts := minio.CopySrcOptions{
+	srcOpts := obstor.CopySrcOptions{
 		Bucket:    bucketName,
 		Object:    objectName,
 		VersionID: infos[0].VersionID,
 	}
 	args["src"] = srcOpts
 
-	dstOpts := minio.CopyDestOptions{
+	dstOpts := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: objectName + "-copy",
 	}
@@ -1495,11 +1495,11 @@ func testConcurrentCopyObjectWithVersioning() {
 		}
 	}
 
-	objectsInfo = c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: false, Prefix: dstOpts.Object})
-	infos = []minio.ObjectInfo{}
+	objectsInfo = c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: false, Prefix: dstOpts.Object})
+	infos = []obstor.ObjectInfo{}
 	for info := range objectsInfo {
 		// Destination object
-		readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", minio.GetObjectOptions{VersionID: info.VersionID})
+		readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", obstor.GetObjectOptions{VersionID: info.VersionID})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetObject failed", err)
 			return
@@ -1542,16 +1542,16 @@ func testComposeObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1578,7 +1578,7 @@ func testComposeObjectWithVersioning() {
 			return
 		}
 		r.Close()
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
@@ -1586,9 +1586,9 @@ func testComposeObjectWithVersioning() {
 		testFilesBytes = append(testFilesBytes, buf)
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 
-	var results []minio.ObjectInfo
+	var results []obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1603,19 +1603,19 @@ func testComposeObjectWithVersioning() {
 
 	// Source objects to concatenate. We also specify decryption
 	// key for each
-	src1 := minio.CopySrcOptions{
+	src1 := obstor.CopySrcOptions{
 		Bucket:    bucketName,
 		Object:    objectName,
 		VersionID: results[0].VersionID,
 	}
 
-	src2 := minio.CopySrcOptions{
+	src2 := obstor.CopySrcOptions{
 		Bucket:    bucketName,
 		Object:    objectName,
 		VersionID: results[1].VersionID,
 	}
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: objectName + "-copy",
 	}
@@ -1627,7 +1627,7 @@ func testComposeObjectWithVersioning() {
 	}
 
 	// Destination object
-	readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", minio.GetObjectOptions{})
+	readerCopy, err := c.GetObject(context.Background(), bucketName, objectName+"-copy", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject of the copy object failed", err)
 		return
@@ -1668,16 +1668,16 @@ func testRemoveObjectWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1692,14 +1692,14 @@ func testRemoveObjectWithVersioning() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	objectsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
-	var version minio.ObjectInfo
+	objectsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
+	var version obstor.ObjectInfo
 	for info := range objectsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1709,30 +1709,30 @@ func testRemoveObjectWithVersioning() {
 		break
 	}
 
-	err = c.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{VersionID: version.VersionID})
+	err = c.RemoveObject(context.Background(), bucketName, objectName, obstor.RemoveObjectOptions{VersionID: version.VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "DeleteObject failed", err)
 		return
 	}
 
-	objectsInfo = c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo = c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 	for range objectsInfo {
 		logError(testName, function, args, startTime, "", "Unexpected versioning info, should not have any one ", err)
 		return
 	}
 	// test delete marker version id is non-null
-	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	// create delete marker
-	err = c.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName, obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "DeleteObject failed", err)
 		return
 	}
-	objectsInfo = c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsInfo = c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 	idx := 0
 	for info := range objectsInfo {
 		if info.Err != nil {
@@ -1766,16 +1766,16 @@ func testRemoveObjectsWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1790,16 +1790,16 @@ func testRemoveObjectsWithVersioning() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader("datafile-10-kB"), int64(dataFileMap["datafile-10-kB"]), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	objectsVersions := make(chan minio.ObjectInfo)
+	objectsVersions := make(chan obstor.ObjectInfo)
 	go func() {
 		objectsVersionsInfo := c.ListObjects(context.Background(), bucketName,
-			minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+			obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 		for info := range objectsVersionsInfo {
 			if info.Err != nil {
 				logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1810,7 +1810,7 @@ func testRemoveObjectsWithVersioning() {
 		close(objectsVersions)
 	}()
 
-	removeErrors := c.RemoveObjects(context.Background(), bucketName, objectsVersions, minio.RemoveObjectsOptions{})
+	removeErrors := c.RemoveObjects(context.Background(), bucketName, objectsVersions, obstor.RemoveObjectsOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "DeleteObjects call failed", err)
 		return
@@ -1823,7 +1823,7 @@ func testRemoveObjectsWithVersioning() {
 		}
 	}
 
-	objectsVersionsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	objectsVersionsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 	for range objectsVersionsInfo {
 		logError(testName, function, args, startTime, "", "Unexpected versioning info, should not have any one ", err)
 		return
@@ -1847,16 +1847,16 @@ func testObjectTaggingWithVersioning() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -1872,16 +1872,16 @@ func testObjectTaggingWithVersioning() {
 	args["objectName"] = objectName
 
 	for _, file := range []string{"datafile-1-b", "datafile-10-kB"} {
-		_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader(file), int64(dataFileMap[file]), minio.PutObjectOptions{})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, getDataReader(file), int64(dataFileMap[file]), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
 		}
 	}
 
-	versionsInfo := c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{WithVersions: true, Recursive: true})
+	versionsInfo := c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{WithVersions: true, Recursive: true})
 
-	var versions []minio.ObjectInfo
+	var versions []obstor.ObjectInfo
 	for info := range versionsInfo {
 		if info.Err != nil {
 			logError(testName, function, args, startTime, "", "Unexpected error during listing objects", err)
@@ -1901,7 +1901,7 @@ func testObjectTaggingWithVersioning() {
 		return
 	}
 
-	err = c.PutObjectTagging(context.Background(), bucketName, objectName, t1, minio.PutObjectTaggingOptions{VersionID: versions[0].VersionID})
+	err = c.PutObjectTagging(context.Background(), bucketName, objectName, t1, obstor.PutObjectTaggingOptions{VersionID: versions[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectTagging (1) failed", err)
 		return
@@ -1914,7 +1914,7 @@ func testObjectTaggingWithVersioning() {
 		return
 	}
 
-	err = c.PutObjectTagging(context.Background(), bucketName, objectName, t2, minio.PutObjectTaggingOptions{VersionID: versions[1].VersionID})
+	err = c.PutObjectTagging(context.Background(), bucketName, objectName, t2, obstor.PutObjectTaggingOptions{VersionID: versions[1].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectTagging (2) failed", err)
 		return
@@ -1932,7 +1932,7 @@ func testObjectTaggingWithVersioning() {
 		return true
 	}
 
-	gotTagsV1, err := c.GetObjectTagging(context.Background(), bucketName, objectName, minio.GetObjectTaggingOptions{VersionID: versions[0].VersionID})
+	gotTagsV1, err := c.GetObjectTagging(context.Background(), bucketName, objectName, obstor.GetObjectTaggingOptions{VersionID: versions[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObjectTagging failed", err)
 		return
@@ -1943,7 +1943,7 @@ func testObjectTaggingWithVersioning() {
 		return
 	}
 
-	gotTagsV2, err := c.GetObjectTagging(context.Background(), bucketName, objectName, minio.GetObjectTaggingOptions{})
+	gotTagsV2, err := c.GetObjectTagging(context.Background(), bucketName, objectName, obstor.GetObjectTaggingOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObjectTaggingContext failed", err)
 		return
@@ -1954,14 +1954,14 @@ func testObjectTaggingWithVersioning() {
 		return
 	}
 
-	err = c.RemoveObjectTagging(context.Background(), bucketName, objectName, minio.RemoveObjectTaggingOptions{VersionID: versions[0].VersionID})
+	err = c.RemoveObjectTagging(context.Background(), bucketName, objectName, obstor.RemoveObjectTaggingOptions{VersionID: versions[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectTagging (2) failed", err)
 		return
 	}
 
 	emptyTags, err := c.GetObjectTagging(context.Background(), bucketName, objectName,
-		minio.GetObjectTaggingOptions{VersionID: versions[0].VersionID})
+		obstor.GetObjectTaggingOptions{VersionID: versions[0].VersionID})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObjectTagging failed", err)
 		return
@@ -1989,7 +1989,7 @@ func testPutObjectWithAutoChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
 	}
 
 	if !isFullMode() {
@@ -1999,16 +1999,16 @@ func testPutObjectWithAutoChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -2036,16 +2036,16 @@ func testPutObjectWithAutoChecksums() {
 		logError(testName, function, args, startTime, "", "Read failed", err)
 		return
 	}
-	h := minio.ChecksumCRC64NVME.Hasher()
+	h := obstor.ChecksumCRC64NVME.Hasher()
 	h.Reset()
 	h.Write(b)
 	// Upload the data without explicit checksum.
-	resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+	resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 		DisableMultipart:     true,
 		DisableContentSha256: false,
 		UserMetadata:         meta,
-		AutoChecksum:         minio.ChecksumNone,
-		Checksum:             minio.ChecksumNone,
+		AutoChecksum:         obstor.ChecksumNone,
+		Checksum:             obstor.ChecksumNone,
 	})
 	_ = resp
 	if err != nil {
@@ -2054,17 +2054,17 @@ func testPutObjectWithAutoChecksums() {
 	}
 
 	// Read the metadata back
-	gopts := minio.GetObjectOptions{Checksum: true}
+	gopts := obstor.GetObjectOptions{Checksum: true}
 	st, err := c.StatObject(context.Background(), bucketName, objectName, gopts)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
 	}
 	if st.ChecksumCRC64NVME != "" {
-		meta[minio.ChecksumCRC64NVME.Key()] = base64.StdEncoding.EncodeToString(h.Sum(nil))
+		meta[obstor.ChecksumCRC64NVME.Key()] = base64.StdEncoding.EncodeToString(h.Sum(nil))
 		cmpChecksum(st.ChecksumCRC64NVME, meta["x-amz-checksum-crc64nvme"])
-		if st.ChecksumMode != minio.ChecksumFullObjectMode.String() {
-			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", st.ChecksumMode, minio.ChecksumFullObjectMode.String()))
+		if st.ChecksumMode != obstor.ChecksumFullObjectMode.String() {
+			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", st.ChecksumMode, obstor.ChecksumFullObjectMode.String()))
 		}
 	}
 	if st.Size != int64(bufSize) {
@@ -2084,7 +2084,7 @@ func testPutObjectWithChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
 	}
 
 	if !isFullMode() {
@@ -2094,16 +2094,16 @@ func testPutObjectWithChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -2111,18 +2111,18 @@ func testPutObjectWithChecksums() {
 
 	defer cleanupBucket(bucketName, c)
 	tests := []struct {
-		cs minio.ChecksumType
+		cs obstor.ChecksumType
 	}{
-		{cs: minio.ChecksumMD5},
-		{cs: minio.ChecksumSHA512},
-		{cs: minio.ChecksumXXHash64},
-		{cs: minio.ChecksumXXHash3},
-		{cs: minio.ChecksumXXHash128},
-		{cs: minio.ChecksumCRC32C},
-		{cs: minio.ChecksumCRC32},
-		{cs: minio.ChecksumSHA1},
-		{cs: minio.ChecksumSHA256},
-		{cs: minio.ChecksumCRC64NVME},
+		{cs: obstor.ChecksumMD5},
+		{cs: obstor.ChecksumSHA512},
+		{cs: obstor.ChecksumXXHash64},
+		{cs: obstor.ChecksumXXHash3},
+		{cs: obstor.ChecksumXXHash128},
+		{cs: obstor.ChecksumCRC32C},
+		{cs: obstor.ChecksumCRC32},
+		{cs: obstor.ChecksumSHA1},
+		{cs: obstor.ChecksumSHA256},
+		{cs: obstor.ChecksumCRC64NVME},
 	}
 
 	for _, test := range tests {
@@ -2162,7 +2162,7 @@ func testPutObjectWithChecksums() {
 		args["range"] = "false"
 		args["checksum"] = test.cs.String()
 
-		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart: true,
 			UserMetadata:     meta,
 		})
@@ -2176,7 +2176,7 @@ func testPutObjectWithChecksums() {
 		meta[test.cs.Key()] = base64.StdEncoding.EncodeToString(h.Sum(nil))
 		reader.Close()
 
-		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart:     true,
 			DisableContentSha256: true,
 			UserMetadata:         meta,
@@ -2199,12 +2199,12 @@ func testPutObjectWithChecksums() {
 		cmpChecksum(resp.ChecksumXXHash64, meta["x-amz-checksum-xxhash64"])
 		cmpChecksum(resp.ChecksumXXHash3, meta["x-amz-checksum-xxhash3"])
 		cmpChecksum(resp.ChecksumXXHash128, meta["x-amz-checksum-xxhash128"])
-		if resp.ChecksumMode != minio.ChecksumFullObjectMode.String() {
-			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", resp.ChecksumMode, minio.ChecksumFullObjectMode.String()))
+		if resp.ChecksumMode != obstor.ChecksumFullObjectMode.String() {
+			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", resp.ChecksumMode, obstor.ChecksumFullObjectMode.String()))
 		}
 
 		// Read the data back
-		gopts := minio.GetObjectOptions{Checksum: true}
+		gopts := obstor.GetObjectOptions{Checksum: true}
 
 		r, err := c.GetObject(context.Background(), bucketName, objectName, gopts)
 		if err != nil {
@@ -2227,8 +2227,8 @@ func testPutObjectWithChecksums() {
 		cmpChecksum(st.ChecksumXXHash64, meta["x-amz-checksum-xxhash64"])
 		cmpChecksum(st.ChecksumXXHash3, meta["x-amz-checksum-xxhash3"])
 		cmpChecksum(st.ChecksumXXHash128, meta["x-amz-checksum-xxhash128"])
-		if st.ChecksumMode != minio.ChecksumFullObjectMode.String() {
-			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", st.ChecksumMode, minio.ChecksumFullObjectMode.String()))
+		if st.ChecksumMode != obstor.ChecksumFullObjectMode.String() {
+			logError(testName, function, args, startTime, "", "Checksum mode is not full object", fmt.Errorf("got %s, want %s", st.ChecksumMode, obstor.ChecksumFullObjectMode.String()))
 		}
 
 		if st.Size != int64(bufSize) {
@@ -2295,7 +2295,7 @@ func testPutObjectWithTrailingChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress, TrailChecksum: xxx}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress, TrailChecksum: xxx}",
 	}
 
 	if !isFullMode() {
@@ -2305,16 +2305,16 @@ func testPutObjectWithTrailingChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -2322,18 +2322,18 @@ func testPutObjectWithTrailingChecksums() {
 
 	defer cleanupBucket(bucketName, c)
 	tests := []struct {
-		cs minio.ChecksumType
+		cs obstor.ChecksumType
 	}{
-		{cs: minio.ChecksumMD5},
-		{cs: minio.ChecksumSHA512},
-		{cs: minio.ChecksumXXHash64},
-		{cs: minio.ChecksumXXHash3},
-		{cs: minio.ChecksumXXHash128},
-		{cs: minio.ChecksumCRC64NVME},
-		{cs: minio.ChecksumCRC32C},
-		{cs: minio.ChecksumCRC32},
-		{cs: minio.ChecksumSHA1},
-		{cs: minio.ChecksumSHA256},
+		{cs: obstor.ChecksumMD5},
+		{cs: obstor.ChecksumSHA512},
+		{cs: obstor.ChecksumXXHash64},
+		{cs: obstor.ChecksumXXHash3},
+		{cs: obstor.ChecksumXXHash128},
+		{cs: obstor.ChecksumCRC64NVME},
+		{cs: obstor.ChecksumCRC32C},
+		{cs: obstor.ChecksumCRC32},
+		{cs: obstor.ChecksumSHA1},
+		{cs: obstor.ChecksumSHA256},
 	}
 	for _, test := range tests {
 		if os.Getenv("MINT_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
@@ -2368,7 +2368,7 @@ func testPutObjectWithTrailingChecksums() {
 		args["range"] = "false"
 		args["checksum"] = test.cs.String()
 
-		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart:     true,
 			DisableContentSha256: true,
 			UserMetadata:         meta,
@@ -2398,7 +2398,7 @@ func testPutObjectWithTrailingChecksums() {
 		cmpChecksum(resp.ChecksumXXHash128, meta["x-amz-checksum-xxhash128"])
 
 		// Read the data back
-		gopts := minio.GetObjectOptions{Checksum: true}
+		gopts := obstor.GetObjectOptions{Checksum: true}
 
 		function = "GetObject(...)"
 		r, err := c.GetObject(context.Background(), bucketName, objectName, gopts)
@@ -2474,7 +2474,7 @@ func testPutObjectWithTrailingChecksums() {
 		cmpChecksum(st.ChecksumXXHash128, "")
 
 		function = "GetObjectAttributes(...)"
-		s, err := c.GetObjectAttributes(context.Background(), bucketName, objectName, minio.ObjectAttributesOptions{})
+		s, err := c.GetObjectAttributes(context.Background(), bucketName, objectName, obstor.ObjectAttributesOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetObjectAttributes failed", err)
 			return
@@ -2489,8 +2489,8 @@ func testPutObjectWithTrailingChecksums() {
 		cmpChecksum(s.Checksum.ChecksumXXHash64, meta["x-amz-checksum-xxhash64"])
 		cmpChecksum(s.Checksum.ChecksumXXHash3, meta["x-amz-checksum-xxhash3"])
 		cmpChecksum(s.Checksum.ChecksumXXHash128, meta["x-amz-checksum-xxhash128"])
-		if s.Checksum.ChecksumType != "" && s.Checksum.ChecksumType != minio.ChecksumFullObjectMode.String() {
-			logError(testName, function, args, startTime, "", "ChecksumType mismatch in GetObjectAttributes", fmt.Errorf("want %s, got %s", minio.ChecksumFullObjectMode.String(), s.Checksum.ChecksumType))
+		if s.Checksum.ChecksumType != "" && s.Checksum.ChecksumType != obstor.ChecksumFullObjectMode.String() {
+			logError(testName, function, args, startTime, "", "ChecksumType mismatch in GetObjectAttributes", fmt.Errorf("want %s, got %s", obstor.ChecksumFullObjectMode.String(), s.Checksum.ChecksumType))
 			return
 		}
 
@@ -2509,7 +2509,7 @@ func testPutMultipartObjectWithChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Trailing: true}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Trailing: true}",
 	}
 
 	if !isFullMode() {
@@ -2519,22 +2519,22 @@ func testPutMultipartObjectWithChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
 	}
 
-	hashMultiPart := func(b []byte, partSize int, cs minio.ChecksumType) string {
+	hashMultiPart := func(b []byte, partSize int, cs obstor.ChecksumType) string {
 		r := bytes.NewReader(b)
 		hasher := cs.Hasher()
 		if cs.FullObjectRequested() {
@@ -2568,20 +2568,20 @@ func testPutMultipartObjectWithChecksums() {
 	}
 	defer cleanupBucket(bucketName, c)
 	tests := []struct {
-		cs minio.ChecksumType
+		cs obstor.ChecksumType
 	}{
-		{cs: minio.ChecksumMD5},
-		{cs: minio.ChecksumSHA512},
-		{cs: minio.ChecksumXXHash64},
-		{cs: minio.ChecksumXXHash3},
-		{cs: minio.ChecksumXXHash128},
-		{cs: minio.ChecksumFullObjectCRC32},
-		{cs: minio.ChecksumFullObjectCRC32C},
-		{cs: minio.ChecksumCRC64NVME},
-		{cs: minio.ChecksumCRC32C},
-		{cs: minio.ChecksumCRC32},
-		{cs: minio.ChecksumSHA1},
-		{cs: minio.ChecksumSHA256},
+		{cs: obstor.ChecksumMD5},
+		{cs: obstor.ChecksumSHA512},
+		{cs: obstor.ChecksumXXHash64},
+		{cs: obstor.ChecksumXXHash3},
+		{cs: obstor.ChecksumXXHash128},
+		{cs: obstor.ChecksumFullObjectCRC32},
+		{cs: obstor.ChecksumFullObjectCRC32C},
+		{cs: obstor.ChecksumCRC64NVME},
+		{cs: obstor.ChecksumCRC32C},
+		{cs: obstor.ChecksumCRC32},
+		{cs: obstor.ChecksumSHA1},
+		{cs: obstor.ChecksumSHA256},
 	}
 
 	for _, test := range tests {
@@ -2624,7 +2624,7 @@ func testPutMultipartObjectWithChecksums() {
 
 		// Set correct CRC.
 		args["section"] = "PutObject"
-		resp, err := c.PutObject(context.Background(), bucketName, objectName, rd, int64(bufSize), minio.PutObjectOptions{
+		resp, err := c.PutObject(context.Background(), bucketName, objectName, rd, int64(bufSize), obstor.PutObjectOptions{
 			DisableContentSha256: true,
 			DisableMultipart:     false,
 			UserMetadata:         nil,
@@ -2641,54 +2641,54 @@ func testPutMultipartObjectWithChecksums() {
 		}
 
 		switch test.cs.Base() {
-		case minio.ChecksumCRC32C:
+		case obstor.ChecksumCRC32C:
 			cmpChecksum(resp.ChecksumCRC32C, wantChksm)
-		case minio.ChecksumCRC32:
+		case obstor.ChecksumCRC32:
 			cmpChecksum(resp.ChecksumCRC32, wantChksm)
-		case minio.ChecksumSHA1:
+		case obstor.ChecksumSHA1:
 			cmpChecksum(resp.ChecksumSHA1, wantChksm)
-		case minio.ChecksumSHA256:
+		case obstor.ChecksumSHA256:
 			cmpChecksum(resp.ChecksumSHA256, wantChksm)
-		case minio.ChecksumCRC64NVME:
+		case obstor.ChecksumCRC64NVME:
 			cmpChecksum(resp.ChecksumCRC64NVME, wantChksm)
-		case minio.ChecksumMD5:
+		case obstor.ChecksumMD5:
 			cmpChecksum(resp.ChecksumMD5, wantChksm)
-		case minio.ChecksumSHA512:
+		case obstor.ChecksumSHA512:
 			cmpChecksum(resp.ChecksumSHA512, wantChksm)
-		case minio.ChecksumXXHash64:
+		case obstor.ChecksumXXHash64:
 			cmpChecksum(resp.ChecksumXXHash64, wantChksm)
-		case minio.ChecksumXXHash3:
+		case obstor.ChecksumXXHash3:
 			cmpChecksum(resp.ChecksumXXHash3, wantChksm)
-		case minio.ChecksumXXHash128:
+		case obstor.ChecksumXXHash128:
 			cmpChecksum(resp.ChecksumXXHash128, wantChksm)
 		}
 
 		args["section"] = "HeadObject"
-		st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{Checksum: true})
+		st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{Checksum: true})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObject failed", err)
 			return
 		}
 		switch test.cs.Base() {
-		case minio.ChecksumCRC32C:
+		case obstor.ChecksumCRC32C:
 			cmpChecksum(st.ChecksumCRC32C, wantChksm)
-		case minio.ChecksumCRC32:
+		case obstor.ChecksumCRC32:
 			cmpChecksum(st.ChecksumCRC32, wantChksm)
-		case minio.ChecksumSHA1:
+		case obstor.ChecksumSHA1:
 			cmpChecksum(st.ChecksumSHA1, wantChksm)
-		case minio.ChecksumSHA256:
+		case obstor.ChecksumSHA256:
 			cmpChecksum(st.ChecksumSHA256, wantChksm)
-		case minio.ChecksumCRC64NVME:
+		case obstor.ChecksumCRC64NVME:
 			cmpChecksum(st.ChecksumCRC64NVME, wantChksm)
-		case minio.ChecksumMD5:
+		case obstor.ChecksumMD5:
 			cmpChecksum(st.ChecksumMD5, wantChksm)
-		case minio.ChecksumSHA512:
+		case obstor.ChecksumSHA512:
 			cmpChecksum(st.ChecksumSHA512, wantChksm)
-		case minio.ChecksumXXHash64:
+		case obstor.ChecksumXXHash64:
 			cmpChecksum(st.ChecksumXXHash64, wantChksm)
-		case minio.ChecksumXXHash3:
+		case obstor.ChecksumXXHash3:
 			cmpChecksum(st.ChecksumXXHash3, wantChksm)
-		case minio.ChecksumXXHash128:
+		case obstor.ChecksumXXHash128:
 			cmpChecksum(st.ChecksumXXHash128, wantChksm)
 		}
 
@@ -2697,10 +2697,10 @@ func testPutMultipartObjectWithChecksums() {
 		// of the full object when HeadObject is called on the copy.
 		args["section"] = "CopyObject"
 		objectCopyName := objectName + "-copy"
-		_, err = c.CopyObject(context.Background(), minio.CopyDestOptions{
+		_, err = c.CopyObject(context.Background(), obstor.CopyDestOptions{
 			Bucket: bucketName,
 			Object: objectCopyName,
-		}, minio.CopySrcOptions{
+		}, obstor.CopySrcOptions{
 			Bucket: bucketName,
 			Object: objectName,
 		})
@@ -2710,36 +2710,36 @@ func testPutMultipartObjectWithChecksums() {
 		}
 
 		args["section"] = "HeadObject-Copy"
-		st, err = c.StatObject(context.Background(), bucketName, objectCopyName, minio.StatObjectOptions{Checksum: true})
+		st, err = c.StatObject(context.Background(), bucketName, objectCopyName, obstor.StatObjectOptions{Checksum: true})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObject failed", err)
 			return
 		}
 		switch test.cs.Base() {
-		case minio.ChecksumCRC32C:
+		case obstor.ChecksumCRC32C:
 			cmpChecksum(st.ChecksumCRC32C, wantFullObjectChksm)
-		case minio.ChecksumCRC32:
+		case obstor.ChecksumCRC32:
 			cmpChecksum(st.ChecksumCRC32, wantFullObjectChksm)
-		case minio.ChecksumSHA1:
+		case obstor.ChecksumSHA1:
 			cmpChecksum(st.ChecksumSHA1, wantFullObjectChksm)
-		case minio.ChecksumSHA256:
+		case obstor.ChecksumSHA256:
 			cmpChecksum(st.ChecksumSHA256, wantFullObjectChksm)
-		case minio.ChecksumCRC64NVME:
+		case obstor.ChecksumCRC64NVME:
 			cmpChecksum(st.ChecksumCRC64NVME, wantFullObjectChksm)
-		case minio.ChecksumMD5:
+		case obstor.ChecksumMD5:
 			cmpChecksum(st.ChecksumMD5, wantFullObjectChksm)
-		case minio.ChecksumSHA512:
+		case obstor.ChecksumSHA512:
 			cmpChecksum(st.ChecksumSHA512, wantFullObjectChksm)
-		case minio.ChecksumXXHash64:
+		case obstor.ChecksumXXHash64:
 			cmpChecksum(st.ChecksumXXHash64, wantFullObjectChksm)
-		case minio.ChecksumXXHash3:
+		case obstor.ChecksumXXHash3:
 			cmpChecksum(st.ChecksumXXHash3, wantFullObjectChksm)
-		case minio.ChecksumXXHash128:
+		case obstor.ChecksumXXHash128:
 			cmpChecksum(st.ChecksumXXHash128, wantFullObjectChksm)
 		}
 
 		args["section"] = "GetObjectAttributes"
-		s, err := c.GetObjectAttributes(context.Background(), bucketName, objectName, minio.ObjectAttributesOptions{})
+		s, err := c.GetObjectAttributes(context.Background(), bucketName, objectName, obstor.ObjectAttributesOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetObjectAttributes failed", err)
 			return
@@ -2750,47 +2750,47 @@ func testPutMultipartObjectWithChecksums() {
 		}
 		switch test.cs {
 		// Full Object CRC does not return anything with GetObjectAttributes
-		case minio.ChecksumCRC32C:
+		case obstor.ChecksumCRC32C:
 			cmpChecksum(s.Checksum.ChecksumCRC32C, wantChksm)
-		case minio.ChecksumCRC32:
+		case obstor.ChecksumCRC32:
 			cmpChecksum(s.Checksum.ChecksumCRC32, wantChksm)
-		case minio.ChecksumSHA1:
+		case obstor.ChecksumSHA1:
 			cmpChecksum(s.Checksum.ChecksumSHA1, wantChksm)
-		case minio.ChecksumSHA256:
+		case obstor.ChecksumSHA256:
 			cmpChecksum(s.Checksum.ChecksumSHA256, wantChksm)
-		case minio.ChecksumCRC64NVME:
+		case obstor.ChecksumCRC64NVME:
 			cmpChecksum(s.Checksum.ChecksumCRC64NVME, wantChksm)
-		case minio.ChecksumMD5:
+		case obstor.ChecksumMD5:
 			cmpChecksum(s.Checksum.ChecksumMD5, wantChksm)
-		case minio.ChecksumSHA512:
+		case obstor.ChecksumSHA512:
 			cmpChecksum(s.Checksum.ChecksumSHA512, wantChksm)
-		case minio.ChecksumXXHash64:
+		case obstor.ChecksumXXHash64:
 			cmpChecksum(s.Checksum.ChecksumXXHash64, wantChksm)
-		case minio.ChecksumXXHash3:
+		case obstor.ChecksumXXHash3:
 			cmpChecksum(s.Checksum.ChecksumXXHash3, wantChksm)
-		case minio.ChecksumXXHash128:
+		case obstor.ChecksumXXHash128:
 			cmpChecksum(s.Checksum.ChecksumXXHash128, wantChksm)
 		}
 
 		if s.Checksum.ChecksumType != "" {
 			var wantType string
 			if test.cs.FullObjectRequested() {
-				wantType = minio.ChecksumFullObjectMode.String()
+				wantType = obstor.ChecksumFullObjectMode.String()
 			} else {
-				wantType = minio.ChecksumCompositeMode.String()
+				wantType = obstor.ChecksumCompositeMode.String()
 			}
 			cmpChecksum(s.Checksum.ChecksumType, wantType)
 		}
 
 		for _, part := range s.ObjectParts.Parts {
-			if test.cs == minio.ChecksumCRC64NVME && part.ChecksumCRC64NVME == "" {
+			if test.cs == obstor.ChecksumCRC64NVME && part.ChecksumCRC64NVME == "" {
 				logError(testName, function, args, startTime, "", "Part missing CRC64NVME checksum in GetObjectAttributes", fmt.Errorf("part %d", part.PartNumber))
 				return
 			}
 		}
 
 		// Read the data back
-		gopts := minio.GetObjectOptions{Checksum: true}
+		gopts := obstor.GetObjectOptions{Checksum: true}
 		gopts.PartNumber = 2
 
 		// We cannot use StatObject, since it ignores partnumber.
@@ -2814,28 +2814,28 @@ func testPutMultipartObjectWithChecksums() {
 
 		switch test.cs {
 		// Full Object CRC does not return any part CRC for whatever reason.
-		case minio.ChecksumCRC32C:
+		case obstor.ChecksumCRC32C:
 			cmpChecksum(st.ChecksumCRC32C, wantChksm)
-		case minio.ChecksumCRC32:
+		case obstor.ChecksumCRC32:
 			cmpChecksum(st.ChecksumCRC32, wantChksm)
-		case minio.ChecksumSHA1:
+		case obstor.ChecksumSHA1:
 			cmpChecksum(st.ChecksumSHA1, wantChksm)
-		case minio.ChecksumSHA256:
+		case obstor.ChecksumSHA256:
 			cmpChecksum(st.ChecksumSHA256, wantChksm)
-		case minio.ChecksumCRC64NVME:
+		case obstor.ChecksumCRC64NVME:
 			// AWS doesn't return part checksum, but may in the future.
 			if st.ChecksumCRC64NVME != "" {
 				cmpChecksum(st.ChecksumCRC64NVME, wantChksm)
 			}
-		case minio.ChecksumMD5:
+		case obstor.ChecksumMD5:
 			cmpChecksum(st.ChecksumMD5, wantChksm)
-		case minio.ChecksumSHA512:
+		case obstor.ChecksumSHA512:
 			cmpChecksum(st.ChecksumSHA512, wantChksm)
-		case minio.ChecksumXXHash64:
+		case obstor.ChecksumXXHash64:
 			cmpChecksum(st.ChecksumXXHash64, wantChksm)
-		case minio.ChecksumXXHash3:
+		case obstor.ChecksumXXHash3:
 			cmpChecksum(st.ChecksumXXHash3, wantChksm)
-		case minio.ChecksumXXHash128:
+		case obstor.ChecksumXXHash128:
 			cmpChecksum(st.ChecksumXXHash128, wantChksm)
 		}
 
@@ -2854,7 +2854,7 @@ func testTrailingChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
 	}
 
 	if !isFullMode() {
@@ -2864,22 +2864,22 @@ func testTrailingChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
 	}
 
-	hashMultiPart := func(b []byte, partSize int, hasher hash.Hash) (oparts []minio.ObjectPart) {
+	hashMultiPart := func(b []byte, partSize int, hasher hash.Hash) (oparts []obstor.ObjectPart) {
 		r := bytes.NewReader(b)
 		tmp := make([]byte, partSize)
 		parts := 0
@@ -2894,7 +2894,7 @@ func testTrailingChecksums() {
 			parts++
 			hasher.Reset()
 			hasher.Write(tmp[:n])
-			oparts = append(oparts, minio.ObjectPart{
+			oparts = append(oparts, obstor.ObjectPart{
 				PartNumber:     parts,
 				Size:           int64(n),
 				ChecksumCRC32C: base64.StdEncoding.EncodeToString(hasher.Sum(nil)),
@@ -2915,55 +2915,55 @@ func testTrailingChecksums() {
 		ChecksumCRC32C string
 		ChecksumSHA1   string
 		ChecksumSHA256 string
-		PO             minio.PutObjectOptions
+		PO             obstor.PutObjectOptions
 	}{
 		// Currently there is no way to override the checksum type.
 		{
 			header:         "x-amz-checksum-crc32c",
 			hasher:         crc32.New(crc32.MakeTable(crc32.Castagnoli)),
 			ChecksumCRC32C: "set",
-			PO: minio.PutObjectOptions{
+			PO: obstor.PutObjectOptions{
 				DisableContentSha256: true,
 				DisableMultipart:     false,
 				UserMetadata:         nil,
 				PartSize:             5 << 20,
-				Checksum:             minio.ChecksumFullObjectCRC32C,
+				Checksum:             obstor.ChecksumFullObjectCRC32C,
 			},
 		},
 		{
 			header:         "x-amz-checksum-crc32c",
 			hasher:         crc32.New(crc32.MakeTable(crc32.Castagnoli)),
 			ChecksumCRC32C: "set",
-			PO: minio.PutObjectOptions{
+			PO: obstor.PutObjectOptions{
 				DisableContentSha256: true,
 				DisableMultipart:     false,
 				UserMetadata:         nil,
 				PartSize:             6_645_654, // Rather arbitrary size
-				Checksum:             minio.ChecksumFullObjectCRC32C,
+				Checksum:             obstor.ChecksumFullObjectCRC32C,
 			},
 		},
 		{
 			header:         "x-amz-checksum-crc32c",
 			hasher:         crc32.New(crc32.MakeTable(crc32.Castagnoli)),
 			ChecksumCRC32C: "set",
-			PO: minio.PutObjectOptions{
+			PO: obstor.PutObjectOptions{
 				DisableContentSha256: false,
 				DisableMultipart:     false,
 				UserMetadata:         nil,
 				PartSize:             5 << 20,
-				Checksum:             minio.ChecksumFullObjectCRC32C,
+				Checksum:             obstor.ChecksumFullObjectCRC32C,
 			},
 		},
 		{
 			header:         "x-amz-checksum-crc32c",
 			hasher:         crc32.New(crc32.MakeTable(crc32.Castagnoli)),
 			ChecksumCRC32C: "set",
-			PO: minio.PutObjectOptions{
+			PO: obstor.PutObjectOptions{
 				DisableContentSha256: false,
 				DisableMultipart:     false,
 				UserMetadata:         nil,
 				PartSize:             6_645_654, // Rather arbitrary size
-				Checksum:             minio.ChecksumFullObjectCRC32C,
+				Checksum:             obstor.ChecksumFullObjectCRC32C,
 			},
 		},
 	}
@@ -2993,7 +2993,7 @@ func testTrailingChecksums() {
 		h.Reset()
 
 		parts := hashMultiPart(b, int(test.PO.PartSize), test.hasher)
-		cksum, err := minio.ChecksumFullObjectCRC32C.FullObjectChecksum(parts)
+		cksum, err := obstor.ChecksumFullObjectCRC32C.FullObjectChecksum(parts)
 		if err != nil {
 			logError(testName, function, args, startTime, "", "checksum calculation failed", err)
 			return
@@ -3013,7 +3013,7 @@ func testTrailingChecksums() {
 		cmpChecksum(resp.ChecksumCRC32C, test.ChecksumCRC32C)
 
 		// Read the data back
-		gopts := minio.GetObjectOptions{Checksum: true}
+		gopts := obstor.GetObjectOptions{Checksum: true}
 		gopts.PartNumber = 2
 
 		// We cannot use StatObject, since it ignores partnumber.
@@ -3064,7 +3064,7 @@ func testPutObjectWithAutomaticChecksums() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
 	}
 
 	if !isFullMode() {
@@ -3074,16 +3074,16 @@ func testPutObjectWithAutomaticChecksums() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -3134,7 +3134,7 @@ func testPutObjectWithAutomaticChecksums() {
 		meta[test.header] = base64.StdEncoding.EncodeToString(h.Sum(nil))
 		args["metadata"] = meta
 
-		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart:     true,
 			UserMetadata:         nil,
 			DisableContentSha256: true,
@@ -3156,7 +3156,7 @@ func testPutObjectWithAutomaticChecksums() {
 
 		// Usually this will be the same as above, since we skip automatic checksum when SHA256 content is sent.
 		// When/if we add a checksum control to PutObjectOptions this will make more sense.
-		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart:     true,
 			UserMetadata:         nil,
 			DisableContentSha256: false,
@@ -3178,7 +3178,7 @@ func testPutObjectWithAutomaticChecksums() {
 		sh256 := sha256.Sum256(b)
 		meta = map[string]string{"x-amz-checksum-sha256": base64.StdEncoding.EncodeToString(sh256[:])}
 		args["metadata"] = meta
-		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), minio.PutObjectOptions{
+		resp, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(b), int64(bufSize), obstor.PutObjectOptions{
 			DisableMultipart:     true,
 			UserMetadata:         meta,
 			DisableContentSha256: true,
@@ -3205,7 +3205,7 @@ func testGetObjectAttributes() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.ObjectAttributesOptions{}",
+		"opts":       "obstor.ObjectAttributesOptions{}",
 	}
 
 	if !isFullMode() {
@@ -3215,28 +3215,28 @@ func testGetObjectAttributes() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	err = c.MakeBucket(
 		context.Background(),
 		bucketName,
-		minio.MakeBucketOptions{Region: "us-east-1"},
+		obstor.MakeBucketOptions{Region: "us-east-1"},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
 	}
 
-	bucketNameV := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-versioned-")
+	bucketNameV := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-versioned-")
 	args["bucketName"] = bucketNameV
 	err = c.MakeBucket(
 		context.Background(),
 		bucketNameV,
-		minio.MakeBucketOptions{Region: "us-east-1"},
+		obstor.MakeBucketOptions{Region: "us-east-1"},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
@@ -3274,10 +3274,10 @@ func testGetObjectAttributes() {
 		reader := getDataReader(v.ObjectReaderType)
 
 		args["objectName"] = v.Object
-		testFiles[i].UploadInfo, err = c.PutObject(context.Background(), v.Bucket, v.Object, reader, int64(bufSize), minio.PutObjectOptions{
+		testFiles[i].UploadInfo, err = c.PutObject(context.Background(), v.Bucket, v.Object, reader, int64(bufSize), obstor.PutObjectOptions{
 			ContentType:    v.ContentType,
 			SendContentMd5: v.SendContentMd5,
-			Checksum:       minio.ChecksumCRC32C,
+			Checksum:       obstor.ChecksumCRC32C,
 		})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
@@ -3288,7 +3288,7 @@ func testGetObjectAttributes() {
 	testTable := make(map[string]objectAttributesTableTest)
 
 	testTable["none-versioned"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{},
+		opts: obstor.ObjectAttributesOptions{},
 		test: objectAttributesTestOptions{
 			TestFileName:     "file2",
 			StorageClass:     "STANDARD",
@@ -3299,7 +3299,7 @@ func testGetObjectAttributes() {
 	}
 
 	testTable["0-to-0-marker"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{
+		opts: obstor.ObjectAttributesOptions{
 			PartNumberMarker: 0,
 			MaxParts:         0,
 		},
@@ -3313,7 +3313,7 @@ func testGetObjectAttributes() {
 	}
 
 	testTable["0-marker-to-max"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{
+		opts: obstor.ObjectAttributesOptions{
 			PartNumberMarker: 0,
 			MaxParts:         10000,
 		},
@@ -3327,7 +3327,7 @@ func testGetObjectAttributes() {
 	}
 
 	testTable["0-to-1-marker"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{
+		opts: obstor.ObjectAttributesOptions{
 			PartNumberMarker: 0,
 			MaxParts:         1,
 		},
@@ -3341,7 +3341,7 @@ func testGetObjectAttributes() {
 	}
 
 	testTable["7-to-6-marker"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{
+		opts: obstor.ObjectAttributesOptions{
 			PartNumberMarker: 7,
 			MaxParts:         6,
 		},
@@ -3355,7 +3355,7 @@ func testGetObjectAttributes() {
 	}
 
 	testTable["versioned"] = objectAttributesTableTest{
-		opts: minio.ObjectAttributesOptions{},
+		opts: obstor.ObjectAttributesOptions{},
 		test: objectAttributesTestOptions{
 			TestFileName:    "file1",
 			StorageClass:    "STANDARD",
@@ -3404,7 +3404,7 @@ func testGetObjectAttributesSSECEncryption() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.ObjectAttributesOptions{}",
+		"opts":       "obstor.ObjectAttributesOptions{}",
 	}
 
 	if !isFullMode() {
@@ -3414,16 +3414,16 @@ func testGetObjectAttributesSSECEncryption() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	err = c.MakeBucket(
 		context.Background(),
 		bucketName,
-		minio.MakeBucketOptions{Region: "us-east-1"},
+		obstor.MakeBucketOptions{Region: "us-east-1"},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
@@ -3439,19 +3439,19 @@ func testGetObjectAttributesSSECEncryption() {
 
 	sse := encrypt.DefaultPBKDF([]byte("word1 word2 word3 word4"), []byte(bucketName+objectName))
 
-	info, err := c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{
+	info, err := c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{
 		ContentType:          "content/custom",
 		SendContentMd5:       false,
 		ServerSideEncryption: sse,
 		PartSize:             uint64(bufSize) / 2,
-		Checksum:             minio.ChecksumCRC32C,
+		Checksum:             obstor.ChecksumCRC32C,
 	})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	opts := minio.ObjectAttributesOptions{
+	opts := obstor.ObjectAttributesOptions{
 		ServerSideEncryption: sse,
 	}
 	attr, err := c.GetObjectAttributes(context.Background(), bucketName, objectName, opts)
@@ -3483,7 +3483,7 @@ func testGetObjectAttributesErrorCases() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.ObjectAttributesOptions{}",
+		"opts":       "obstor.ObjectAttributesOptions{}",
 	}
 
 	if !isFullMode() {
@@ -3493,43 +3493,43 @@ func testGetObjectAttributesErrorCases() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
-	unknownBucket := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-bucket-")
-	unknownObject := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-object-")
+	unknownBucket := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-bucket-")
+	unknownObject := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-object-")
 
-	_, err = c.GetObjectAttributes(context.Background(), unknownBucket, unknownObject, minio.ObjectAttributesOptions{})
+	_, err = c.GetObjectAttributes(context.Background(), unknownBucket, unknownObject, obstor.ObjectAttributesOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "GetObjectAttributes failed", nil)
 		return
 	}
 
-	errorResponse := err.(minio.ErrorResponse)
-	if errorResponse.Code != minio.NoSuchBucket {
+	errorResponse := err.(obstor.ErrorResponse)
+	if errorResponse.Code != obstor.NoSuchBucket {
 		logError(testName, function, args, startTime, "", "Invalid error code, expected NoSuchBucket but got "+errorResponse.Code, nil)
 		return
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	err = c.MakeBucket(
 		context.Background(),
 		bucketName,
-		minio.MakeBucketOptions{Region: "us-east-1"},
+		obstor.MakeBucketOptions{Region: "us-east-1"},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
 	}
 
-	bucketNameV := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-versioned-")
+	bucketNameV := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-versioned-")
 	args["bucketName"] = bucketNameV
 	err = c.MakeBucket(
 		context.Background(),
 		bucketNameV,
-		minio.MakeBucketOptions{Region: "us-east-1"},
+		obstor.MakeBucketOptions{Region: "us-east-1"},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
@@ -3543,40 +3543,40 @@ func testGetObjectAttributesErrorCases() {
 	defer cleanupBucket(bucketName, c)
 	defer cleanupVersionedBucket(bucketNameV, c)
 
-	_, err = c.GetObjectAttributes(context.Background(), bucketName, unknownObject, minio.ObjectAttributesOptions{})
+	_, err = c.GetObjectAttributes(context.Background(), bucketName, unknownObject, obstor.ObjectAttributesOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "GetObjectAttributes failed", nil)
 		return
 	}
 
-	errorResponse = err.(minio.ErrorResponse)
-	if errorResponse.Code != minio.NoSuchKey {
-		logError(testName, function, args, startTime, "", "Invalid error code, expected "+minio.NoSuchKey+" but got "+errorResponse.Code, nil)
+	errorResponse = err.(obstor.ErrorResponse)
+	if errorResponse.Code != obstor.NoSuchKey {
+		logError(testName, function, args, startTime, "", "Invalid error code, expected "+obstor.NoSuchKey+" but got "+errorResponse.Code, nil)
 		return
 	}
 
-	_, err = c.GetObjectAttributes(context.Background(), bucketName, "", minio.ObjectAttributesOptions{})
+	_, err = c.GetObjectAttributes(context.Background(), bucketName, "", obstor.ObjectAttributesOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "GetObjectAttributes with empty object name should have failed", nil)
 		return
 	}
 
-	_, err = c.GetObjectAttributes(context.Background(), "", unknownObject, minio.ObjectAttributesOptions{})
+	_, err = c.GetObjectAttributes(context.Background(), "", unknownObject, obstor.ObjectAttributesOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "GetObjectAttributes with empty bucket name should have failed", nil)
 		return
 	}
 
-	_, err = c.GetObjectAttributes(context.Background(), bucketNameV, unknownObject, minio.ObjectAttributesOptions{
+	_, err = c.GetObjectAttributes(context.Background(), bucketNameV, unknownObject, obstor.ObjectAttributesOptions{
 		VersionID: uuid.NewString(),
 	})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "GetObjectAttributes with empty bucket name should have failed", nil)
 		return
 	}
-	errorResponse = err.(minio.ErrorResponse)
-	if errorResponse.Code != minio.NoSuchVersion {
-		logError(testName, function, args, startTime, "", "Invalid error code, expected "+minio.NoSuchVersion+" but got "+errorResponse.Code, nil)
+	errorResponse = err.(obstor.ErrorResponse)
+	if errorResponse.Code != obstor.NoSuchVersion {
+		logError(testName, function, args, startTime, "", "Invalid error code, expected "+obstor.NoSuchVersion+" but got "+errorResponse.Code, nil)
 		return
 	}
 
@@ -3589,11 +3589,11 @@ type objectAttributesNewObject struct {
 	Bucket           string
 	ContentType      string
 	SendContentMd5   bool
-	UploadInfo       minio.UploadInfo
+	UploadInfo       obstor.UploadInfo
 }
 
 type objectAttributesTableTest struct {
-	opts minio.ObjectAttributesOptions
+	opts obstor.ObjectAttributesOptions
 	test objectAttributesTestOptions
 }
 
@@ -3608,7 +3608,7 @@ type objectAttributesTestOptions struct {
 	HasParts         bool
 }
 
-func validateObjectAttributeRequest(OA *minio.ObjectAttributes, opts *minio.ObjectAttributesOptions, test *objectAttributesTestOptions) (err error) {
+func validateObjectAttributeRequest(OA *obstor.ObjectAttributes, opts *obstor.ObjectAttributesOptions, test *objectAttributesTestOptions) (err error) {
 	if opts.VersionID != "" {
 		if OA.VersionID != opts.VersionID {
 			err = fmt.Errorf("Expected versionId %s but got versionId %s", opts.VersionID, OA.VersionID)
@@ -3735,7 +3735,7 @@ func testPutObjectWithMetadata() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
+		"opts":       "obstor.PutObjectOptions{UserMetadata: metadata, Progress: progress}",
 	}
 
 	if !isFullMode() {
@@ -3745,16 +3745,16 @@ func testPutObjectWithMetadata() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Make bucket failed", err)
 		return
@@ -3778,7 +3778,7 @@ func testPutObjectWithMetadata() {
 		"X-Amz-Meta-CustomKey": {"extra  spaces  in   value"},
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{
 		ContentType: customContentType,
 	})
 	if err != nil {
@@ -3787,7 +3787,7 @@ func testPutObjectWithMetadata() {
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -3837,15 +3837,15 @@ func testPutObjectWithContentLanguage() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -3854,7 +3854,7 @@ func testPutObjectWithContentLanguage() {
 	defer cleanupBucket(bucketName, c)
 
 	data := []byte{}
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(data), int64(0), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(data), int64(0), obstor.PutObjectOptions{
 		ContentLanguage: "en",
 	})
 	if err != nil {
@@ -3862,7 +3862,7 @@ func testPutObjectWithContentLanguage() {
 		return
 	}
 
-	objInfo, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -3892,15 +3892,15 @@ func testPutObjectStreaming() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -3913,7 +3913,7 @@ func testPutObjectStreaming() {
 
 	for _, size := range sizes {
 		data := newRandomReader(size, size)
-		ui, err := c.PutObject(context.Background(), bucketName, objectName, data, int64(size), minio.PutObjectOptions{})
+		ui, err := c.PutObject(context.Background(), bucketName, objectName, data, int64(size), obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObjectStreaming failed", err)
 			return
@@ -3924,7 +3924,7 @@ func testPutObjectStreaming() {
 			return
 		}
 
-		objInfo, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+		objInfo, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObject failed", err)
 			return
@@ -3947,19 +3947,19 @@ func testPutObjectPreconditionOnNonExistent() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{SetMatchETag/SetMatchETagExcept}",
+		"opts":       "obstor.PutObjectOptions{SetMatchETag/SetMatchETagExcept}",
 	}
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -3973,7 +3973,7 @@ func testPutObjectPreconditionOnNonExistent() {
 
 	data := bytes.NewReader([]byte("test data"))
 
-	opts := minio.PutObjectOptions{}
+	opts := obstor.PutObjectOptions{}
 	opts.SetMatchETag("some-etag")
 
 	_, err = c.PutObject(context.Background(), bucketName, objectName, data, int64(data.Len()), opts)
@@ -3982,7 +3982,7 @@ func testPutObjectPreconditionOnNonExistent() {
 		return
 	}
 
-	errResp := minio.ToErrorResponse(err)
+	errResp := obstor.ToErrorResponse(err)
 	if errResp.Code != "NoSuchKey" {
 		logError(testName, function, args, startTime, "", fmt.Sprintf("Expected NoSuchKey error (AWS standard for non-existent objects), got %s", errResp.Code), err)
 		return
@@ -3993,7 +3993,7 @@ func testPutObjectPreconditionOnNonExistent() {
 	args["objectName"] = objectName2
 
 	data2 := bytes.NewReader([]byte("test data 2"))
-	opts2 := minio.PutObjectOptions{}
+	opts2 := obstor.PutObjectOptions{}
 	opts2.SetMatchETagExcept("some-etag")
 
 	_, err = c.PutObject(context.Background(), bucketName, objectName2, data2, int64(data2.Len()), opts2)
@@ -4008,7 +4008,7 @@ func testPutObjectPreconditionOnNonExistent() {
 	data3 := bytes.Repeat([]byte("a"), 5*1024*1024+1)
 	reader3 := bytes.NewReader(data3)
 
-	opts3 := minio.PutObjectOptions{}
+	opts3 := obstor.PutObjectOptions{}
 	opts3.SetMatchETag("non-existent-etag")
 
 	_, err = c.PutObject(context.Background(), bucketName, objectName3, reader3, int64(len(data3)), opts3)
@@ -4017,7 +4017,7 @@ func testPutObjectPreconditionOnNonExistent() {
 		return
 	}
 
-	errResp = minio.ToErrorResponse(err)
+	errResp = obstor.ToErrorResponse(err)
 	if errResp.Code != "NoSuchKey" {
 		logError(testName, function, args, startTime, "", fmt.Sprintf("Expected NoSuchKey error (AWS standard for non-existent objects) for multipart, got %s", errResp.Code), err)
 		return
@@ -4036,16 +4036,16 @@ func testGetObjectSeekEnd() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4068,14 +4068,14 @@ func testGetObjectSeekEnd() {
 		return
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -4144,16 +4144,16 @@ func testGetObjectClosedTwice() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4170,14 +4170,14 @@ func testGetObjectClosedTwice() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -4218,19 +4218,19 @@ func testRemoveObjectsContext() {
 		"bucketName": "",
 	}
 
-	// Instantiate new minio client.
+	// Instantiate new obstor client.
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4243,18 +4243,18 @@ func testRemoveObjectsContext() {
 
 	// Multi remove of 20 objects.
 	nrObjects := 20
-	objectsCh := make(chan minio.ObjectInfo)
+	objectsCh := make(chan obstor.ObjectInfo)
 	go func() {
 		defer close(objectsCh)
 		for i := 0; i < nrObjects; i++ {
 			objectName := "sample" + strconv.Itoa(i) + ".txt"
 			info, err := c.PutObject(context.Background(), bucketName, objectName, r, 8,
-				minio.PutObjectOptions{ContentType: "application/octet-stream"})
+				obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 			if err != nil {
 				logError(testName, function, args, startTime, "", "PutObject failed", err)
 				continue
 			}
-			objectsCh <- minio.ObjectInfo{
+			objectsCh <- obstor.ObjectInfo{
 				Key:       info.Key,
 				VersionID: info.VersionID,
 			}
@@ -4266,7 +4266,7 @@ func testRemoveObjectsContext() {
 	defer cancel()
 
 	// Call RemoveObjects API with short timeout.
-	errorCh := c.RemoveObjects(ctx, bucketName, objectsCh, minio.RemoveObjectsOptions{})
+	errorCh := c.RemoveObjects(ctx, bucketName, objectsCh, obstor.RemoveObjectsOptions{})
 	// Check for error.
 	select {
 	case r := <-errorCh:
@@ -4280,7 +4280,7 @@ func testRemoveObjectsContext() {
 	args["ctx"] = ctx
 	defer cancel()
 	// Perform RemoveObjects with the longer timeout. Expect the removals to succeed.
-	errorCh = c.RemoveObjects(ctx, bucketName, objectsCh, minio.RemoveObjectsOptions{})
+	errorCh = c.RemoveObjects(ctx, bucketName, objectsCh, obstor.RemoveObjectsOptions{})
 	select {
 	case r, more := <-errorCh:
 		if more || r.Err != nil {
@@ -4304,16 +4304,16 @@ func testRemoveMultipleObjects() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4326,7 +4326,7 @@ func testRemoveMultipleObjects() {
 	// Multi remove of 1100 objects
 	nrObjects := 1100
 
-	objectsCh := make(chan minio.ObjectInfo)
+	objectsCh := make(chan obstor.ObjectInfo)
 
 	go func() {
 		defer close(objectsCh)
@@ -4334,12 +4334,12 @@ func testRemoveMultipleObjects() {
 		for i := 0; i < nrObjects; i++ {
 			objectName := "sample" + strconv.Itoa(i) + ".txt"
 			info, err := c.PutObject(context.Background(), bucketName, objectName, r, 1,
-				minio.PutObjectOptions{ContentType: "application/octet-stream"})
+				obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 			if err != nil {
 				logError(testName, function, args, startTime, "", "PutObject failed", err)
 				continue
 			}
-			objectsCh <- minio.ObjectInfo{
+			objectsCh <- obstor.ObjectInfo{
 				Key:       info.Key,
 				VersionID: info.VersionID,
 			}
@@ -4347,7 +4347,7 @@ func testRemoveMultipleObjects() {
 	}()
 
 	// Call RemoveObjects API
-	errorCh := c.RemoveObjects(context.Background(), bucketName, objectsCh, minio.RemoveObjectsOptions{})
+	errorCh := c.RemoveObjects(context.Background(), bucketName, objectsCh, obstor.RemoveObjectsOptions{})
 
 	// Check if errorCh doesn't receive any error
 	select {
@@ -4373,16 +4373,16 @@ func testRemoveMultipleObjectsIter() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4395,18 +4395,18 @@ func testRemoveMultipleObjectsIter() {
 	// Multi remove of 1100 objects
 	nrObjects := 1100
 
-	objectsIter := func() iter.Seq[minio.ObjectInfo] {
-		return func(yield func(minio.ObjectInfo) bool) {
+	objectsIter := func() iter.Seq[obstor.ObjectInfo] {
+		return func(yield func(obstor.ObjectInfo) bool) {
 			// Upload objects and send them to objectsCh
 			for i := 0; i < nrObjects; i++ {
 				objectName := "sample" + strconv.Itoa(i) + ".txt"
 				info, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), 1,
-					minio.PutObjectOptions{ContentType: "application/octet-stream"})
+					obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 				if err != nil {
 					logError(testName, function, args, startTime, "", "PutObject failed", err)
 					continue
 				}
-				if !yield(minio.ObjectInfo{
+				if !yield(obstor.ObjectInfo{
 					Key:       info.Key,
 					VersionID: info.VersionID,
 				}) {
@@ -4417,7 +4417,7 @@ func testRemoveMultipleObjectsIter() {
 	}
 
 	// Call RemoveObjects API
-	results, err := c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter(), minio.RemoveObjectsOptions{})
+	results, err := c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter(), obstor.RemoveObjectsOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Unexpected error", err)
 		return
@@ -4445,16 +4445,16 @@ func testRemoveMultipleObjectsWithResult() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4467,7 +4467,7 @@ func testRemoveMultipleObjectsWithResult() {
 	nrObjects := 10
 	nrLockedObjects := 5
 
-	objectsCh := make(chan minio.ObjectInfo)
+	objectsCh := make(chan obstor.ObjectInfo)
 
 	go func() {
 		defer close(objectsCh)
@@ -4475,7 +4475,7 @@ func testRemoveMultipleObjectsWithResult() {
 		for i := 0; i < nrObjects; i++ {
 			objectName := "sample" + strconv.Itoa(i) + ".txt"
 			info, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), 1,
-				minio.PutObjectOptions{ContentType: "application/octet-stream"})
+				obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 			if err != nil {
 				logError(testName, function, args, startTime, "", "PutObject failed", err)
 				return
@@ -4483,8 +4483,8 @@ func testRemoveMultipleObjectsWithResult() {
 			if i < nrLockedObjects {
 				// t := time.Date(2130, time.April, 25, 14, 0, 0, 0, time.UTC)
 				t := time.Now().Add(5 * time.Minute)
-				m := minio.RetentionMode(minio.Governance)
-				opts := minio.PutObjectRetentionOptions{
+				m := obstor.RetentionMode(obstor.Governance)
+				opts := obstor.PutObjectRetentionOptions{
 					GovernanceBypass: false,
 					RetainUntilDate:  &t,
 					Mode:             &m,
@@ -4497,7 +4497,7 @@ func testRemoveMultipleObjectsWithResult() {
 				}
 			}
 
-			objectsCh <- minio.ObjectInfo{
+			objectsCh <- obstor.ObjectInfo{
 				Key:       info.Key,
 				VersionID: info.VersionID,
 			}
@@ -4505,7 +4505,7 @@ func testRemoveMultipleObjectsWithResult() {
 	}()
 
 	// Call RemoveObjects API
-	resultCh := c.RemoveObjectsWithResult(context.Background(), bucketName, objectsCh, minio.RemoveObjectsOptions{})
+	resultCh := c.RemoveObjectsWithResult(context.Background(), bucketName, objectsCh, obstor.RemoveObjectsOptions{})
 
 	var foundNil, foundErr int
 
@@ -4566,16 +4566,16 @@ func testFPutObjectMultipart() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4613,13 +4613,13 @@ func testFPutObjectMultipart() {
 	args["objectContentType"] = objectContentType
 
 	// Perform standard FPutObject with contentType provided (Expecting application/octet-stream)
-	_, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, minio.PutObjectOptions{ContentType: objectContentType})
+	_, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, obstor.PutObjectOptions{ContentType: objectContentType})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
 	}
 
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -4657,19 +4657,19 @@ func testFPutObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	location := "us-east-1"
 
 	// Make a new bucket.
 	args["bucketName"] = bucketName
 	args["location"] = location
 	function = "MakeBucket(bucketName, location)"
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: location})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: location})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4707,10 +4707,10 @@ func testFPutObject() {
 	objectName := bucketName + "FPutObject"
 	args["objectName"] = objectName + "-standard"
 	args["fileName"] = fName
-	args["opts"] = minio.PutObjectOptions{ContentType: "application/octet-stream"}
+	args["opts"] = obstor.PutObjectOptions{ContentType: "application/octet-stream"}
 
 	// Perform standard FPutObject with contentType provided (Expecting application/octet-stream)
-	ui, err := c.FPutObject(context.Background(), bucketName, objectName+"-standard", fName, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	ui, err := c.FPutObject(context.Background(), bucketName, objectName+"-standard", fName, obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
@@ -4723,7 +4723,7 @@ func testFPutObject() {
 
 	// Perform FPutObject with no contentType provided (Expecting application/octet-stream)
 	args["objectName"] = objectName + "-Octet"
-	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-Octet", fName, minio.PutObjectOptions{})
+	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-Octet", fName, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "File close failed", err)
 		return
@@ -4750,8 +4750,8 @@ func testFPutObject() {
 
 	// Perform FPutObject with no contentType provided (Expecting application/x-gtar)
 	args["objectName"] = objectName + "-GTar"
-	args["opts"] = minio.PutObjectOptions{}
-	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-GTar", fName+".gtar", minio.PutObjectOptions{})
+	args["opts"] = obstor.PutObjectOptions{}
+	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-GTar", fName+".gtar", obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
@@ -4760,7 +4760,7 @@ func testFPutObject() {
 	// Check headers
 	function = "StatObject(bucketName, objectName, opts)"
 	args["objectName"] = objectName + "-standard"
-	rStandard, err := c.StatObject(context.Background(), bucketName, objectName+"-standard", minio.StatObjectOptions{})
+	rStandard, err := c.StatObject(context.Background(), bucketName, objectName+"-standard", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -4772,7 +4772,7 @@ func testFPutObject() {
 
 	function = "StatObject(bucketName, objectName, opts)"
 	args["objectName"] = objectName + "-Octet"
-	rOctet, err := c.StatObject(context.Background(), bucketName, objectName+"-Octet", minio.StatObjectOptions{})
+	rOctet, err := c.StatObject(context.Background(), bucketName, objectName+"-Octet", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -4784,7 +4784,7 @@ func testFPutObject() {
 
 	function = "StatObject(bucketName, objectName, opts)"
 	args["objectName"] = objectName + "-GTar"
-	rGTar, err := c.StatObject(context.Background(), bucketName, objectName+"-GTar", minio.StatObjectOptions{})
+	rGTar, err := c.StatObject(context.Background(), bucketName, objectName+"-GTar", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -4813,16 +4813,16 @@ func testFPutObjectContext() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4863,7 +4863,7 @@ func testFPutObjectContext() {
 	defer cancel()
 
 	// Perform FPutObject with contentType provided (Expecting application/octet-stream)
-	_, err = c.FPutObject(ctx, bucketName, objectName+"-Shorttimeout", fName, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.FPutObject(ctx, bucketName, objectName+"-Shorttimeout", fName, obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "FPutObject should fail on short timeout", err)
 		return
@@ -4871,13 +4871,13 @@ func testFPutObjectContext() {
 	ctx, cancel = context.WithTimeout(context.Background(), 1*time.Hour)
 	defer cancel()
 	// Perform FPutObject with a long timeout. Expect the put object to succeed
-	_, err = c.FPutObject(ctx, bucketName, objectName+"-Longtimeout", fName, minio.PutObjectOptions{})
+	_, err = c.FPutObject(ctx, bucketName, objectName+"-Longtimeout", fName, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject shouldn't fail on long timeout", err)
 		return
 	}
 
-	_, err = c.StatObject(context.Background(), bucketName, objectName+"-Longtimeout", minio.StatObjectOptions{})
+	_, err = c.StatObject(context.Background(), bucketName, objectName+"-Longtimeout", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -4895,21 +4895,21 @@ func testFPutObjectContextV2() {
 	args := map[string]interface{}{
 		"bucketName": "",
 		"objectName": "",
-		"opts":       "minio.PutObjectOptions{ContentType:objectContentType}",
+		"opts":       "obstor.PutObjectOptions{ContentType:objectContentType}",
 	}
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -4952,7 +4952,7 @@ func testFPutObjectContextV2() {
 	defer cancel()
 
 	// Perform FPutObject with contentType provided (Expecting application/octet-stream)
-	_, err = c.FPutObject(ctx, bucketName, objectName+"-Shorttimeout", fName, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.FPutObject(ctx, bucketName, objectName+"-Shorttimeout", fName, obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "FPutObject should fail on short timeout", err)
 		return
@@ -4960,13 +4960,13 @@ func testFPutObjectContextV2() {
 	ctx, cancel = context.WithTimeout(context.Background(), 1*time.Hour)
 	defer cancel()
 	// Perform FPutObject with a long timeout. Expect the put object to succeed
-	_, err = c.FPutObject(ctx, bucketName, objectName+"-Longtimeout", fName, minio.PutObjectOptions{})
+	_, err = c.FPutObject(ctx, bucketName, objectName+"-Longtimeout", fName, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject shouldn't fail on longer timeout", err)
 		return
 	}
 
-	_, err = c.StatObject(context.Background(), bucketName, objectName+"-Longtimeout", minio.StatObjectOptions{})
+	_, err = c.StatObject(context.Background(), bucketName, objectName+"-Longtimeout", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -4990,15 +4990,15 @@ func testPutObjectContext() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Make a new bucket.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket call failed", err)
 		return
@@ -5015,9 +5015,9 @@ func testPutObjectContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	cancel()
 	args["ctx"] = ctx
-	args["opts"] = minio.PutObjectOptions{ContentType: "binary/octet-stream"}
+	args["opts"] = obstor.PutObjectOptions{ContentType: "binary/octet-stream"}
 
-	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "PutObject should fail on short timeout", err)
 		return
@@ -5029,7 +5029,7 @@ func testPutObjectContext() {
 	defer cancel()
 	reader = getDataReader("datafile-33-kB")
 	defer reader.Close()
-	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject with long timeout failed", err)
 		return
@@ -5044,20 +5044,20 @@ func testGetObjectS3Zip() {
 	startTime := time.Now()
 	testName := getFuncName()
 	function := "GetObject(bucketName, objectName)"
-	args := map[string]interface{}{"x-minio-extract": true}
+	args := map[string]interface{}{"x-obstor-extract": true}
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5102,14 +5102,14 @@ func testGetObjectS3Zip() {
 	buf := zipFile.Bytes()
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -5132,12 +5132,12 @@ func testGetObjectS3Zip() {
 		logError(testName, function, args, startTime, "", "zip.NewReader failed", err)
 		return
 	}
-	lOpts := minio.ListObjectsOptions{}
-	lOpts.Set("x-minio-extract", "true")
+	lOpts := obstor.ListObjectsOptions{}
+	lOpts.Set("x-obstor-extract", "true")
 	lOpts.Prefix = objectName + "/"
 	lOpts.Recursive = true
 	list := c.ListObjects(context.Background(), bucketName, lOpts)
-	listed := map[string]minio.ObjectInfo{}
+	listed := map[string]obstor.ObjectInfo{}
 	for item := range list {
 		if item.Err != nil {
 			break
@@ -5145,7 +5145,7 @@ func testGetObjectS3Zip() {
 		listed[item.Key] = item
 	}
 	if len(listed) == 0 {
-		// Assume we are running against non-minio.
+		// Assume we are running against non-obstor.
 		args["SKIPPED"] = true
 		logIgnored(testName, function, args, startTime, "s3zip does not appear to be present")
 		return
@@ -5167,12 +5167,12 @@ func testGetObjectS3Zip() {
 			return
 		}
 
-		opts := minio.GetObjectOptions{}
-		opts.Set("x-minio-extract", "true")
+		opts := obstor.GetObjectOptions{}
+		opts.Set("x-obstor-extract", "true")
 		key := path.Join(objectName, file.Name)
 		r, err = c.GetObject(context.Background(), bucketName, key, opts)
 		if err != nil {
-			terr := minio.ToErrorResponse(err)
+			terr := obstor.ToErrorResponse(err)
 			if terr.StatusCode != http.StatusNotFound {
 				logError(testName, function, args, startTime, "", "GetObject failed", err)
 			}
@@ -5217,16 +5217,16 @@ func testGetObjectReadSeekFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5255,14 +5255,14 @@ func testGetObjectReadSeekFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -5372,16 +5372,16 @@ func testGetObjectReadAtFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5404,14 +5404,14 @@ func testGetObjectReadAtFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -5571,16 +5571,16 @@ func testGetObjectReadAtWhenEOFWasReached() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5603,14 +5603,14 @@ func testGetObjectReadAtWhenEOFWasReached() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -5676,15 +5676,15 @@ func testPresignedPostPolicy() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5707,7 +5707,7 @@ func testPresignedPostPolicy() {
 		return
 	}
 
-	policy := minio.NewPostPolicy()
+	policy := obstor.NewPostPolicy()
 	policy.SetBucket(bucketName)
 	policy.SetKey(objectName)
 	policy.SetExpires(time.Now().UTC().AddDate(0, 0, 10)) // expires in 10 days
@@ -5717,7 +5717,7 @@ func testPresignedPostPolicy() {
 	policy.SetContentEncoding("gzip")
 
 	// Add CRC32C
-	checksum := minio.ChecksumCRC32C.ChecksumBytes(buf)
+	checksum := obstor.ChecksumCRC32C.ChecksumBytes(buf)
 	err = policy.SetChecksum(checksum)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "SetChecksum failed", err)
@@ -5837,7 +5837,7 @@ func testPresignedPostPolicy() {
 	}
 
 	// Ensure that when we subsequently GetObject, the checksum is returned
-	gopts := minio.GetObjectOptions{Checksum: true}
+	gopts := obstor.GetObjectOptions{Checksum: true}
 	r, err := c.GetObject(context.Background(), bucketName, objectName, gopts)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
@@ -5868,15 +5868,15 @@ func testPresignedPostPolicyWrongFile() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -5889,7 +5889,7 @@ func testPresignedPostPolicyWrongFile() {
 	metadataKey := randString(60, rand.NewSource(time.Now().UnixNano()), "user")
 	metadataValue := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 
-	policy := minio.NewPostPolicy()
+	policy := obstor.NewPostPolicy()
 	policy.SetBucket(bucketName)
 	policy.SetKey(objectName)
 	policy.SetExpires(time.Now().UTC().AddDate(0, 0, 10)) // expires in 10 days
@@ -5898,7 +5898,7 @@ func testPresignedPostPolicyWrongFile() {
 	policy.SetUserMetadata(metadataKey, metadataValue)
 
 	// Add CRC32C of some data that the policy will explicitly allow.
-	checksum := minio.ChecksumCRC32C.ChecksumBytes([]byte{0x01, 0x02, 0x03})
+	checksum := obstor.ChecksumCRC32C.ChecksumBytes([]byte{0x01, 0x02, 0x03})
 	err = policy.SetChecksum(checksum)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "SetChecksum failed", err)
@@ -5940,7 +5940,7 @@ func testPresignedPostPolicyWrongFile() {
 		logError(testName, function, args, startTime, "", "ReadAll failed", err)
 		return
 	}
-	otherChecksum := minio.ChecksumCRC32C.ChecksumBytes(buf10k)
+	otherChecksum := obstor.ChecksumCRC32C.ChecksumBytes(buf10k)
 
 	var formBuf bytes.Buffer
 	writer := multipart.NewWriter(&formBuf)
@@ -6004,7 +6004,7 @@ func testPresignedPostPolicyWrongFile() {
 	}
 
 	// Normalize the response body, because S3 uses quotes around the policy condition components
-	// in the error message, MinIO does not.
+	// in the error message, Obstor does not.
 	resBodyStr := strings.ReplaceAll(string(resBody), `"`, "")
 	if !strings.Contains(resBodyStr, "Policy Condition failed: [eq, $x-amz-checksum-crc32c, 8TDyHg=") {
 		logError(testName, function, args, startTime, "", "Unexpected response body", errors.New(resBodyStr))
@@ -6026,15 +6026,15 @@ func testPresignedPostPolicyEmptyFileName() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6057,7 +6057,7 @@ func testPresignedPostPolicyEmptyFileName() {
 		return
 	}
 
-	policy := minio.NewPostPolicy()
+	policy := obstor.NewPostPolicy()
 	policy.SetBucket(bucketName)
 	policy.SetKey(objectName)
 	policy.SetExpires(time.Now().UTC().AddDate(0, 0, 10)) // expires in 10 days
@@ -6067,7 +6067,7 @@ func testPresignedPostPolicyEmptyFileName() {
 	policy.SetContentEncoding("gzip")
 
 	// Add CRC32C
-	checksum := minio.ChecksumCRC32C.ChecksumBytes(buf)
+	checksum := obstor.ChecksumCRC32C.ChecksumBytes(buf)
 	err = policy.SetChecksum(checksum)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "SetChecksum failed", err)
@@ -6179,15 +6179,15 @@ func testCopyObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6196,7 +6196,7 @@ func testCopyObject() {
 	defer cleanupBucket(bucketName, c)
 
 	// Make a new bucket in 'us-east-1' (destination bucket).
-	err = c.MakeBucket(context.Background(), bucketName+"-copy", minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName+"-copy", obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6209,13 +6209,13 @@ func testCopyObject() {
 
 	// Save the data
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -6228,7 +6228,7 @@ func testCopyObject() {
 	}
 
 	// Copy Source
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket: bucketName,
 		Object: objectName,
 		// Set copy conditions.
@@ -6237,7 +6237,7 @@ func testCopyObject() {
 	}
 	args["src"] = src
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName + "-copy",
 		Object: objectName + "-copy",
 	}
@@ -6249,14 +6249,14 @@ func testCopyObject() {
 	}
 
 	// Source object
-	r, err = c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err = c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
 	}
 
 	// Destination object
-	readerCopy, err := c.GetObject(context.Background(), bucketName+"-copy", objectName+"-copy", minio.GetObjectOptions{})
+	readerCopy, err := c.GetObject(context.Background(), bucketName+"-copy", objectName+"-copy", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -6291,7 +6291,7 @@ func testCopyObject() {
 	readerCopy.Close()
 
 	// CopyObject again but with wrong conditions
-	src = minio.CopySrcOptions{
+	src = obstor.CopySrcOptions{
 		Bucket:               bucketName,
 		Object:               objectName,
 		MatchUnmodifiedSince: time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC),
@@ -6305,12 +6305,12 @@ func testCopyObject() {
 		return
 	}
 
-	src = minio.CopySrcOptions{
+	src = obstor.CopySrcOptions{
 		Bucket: bucketName,
 		Object: objectName,
 	}
 
-	dst = minio.CopyDestOptions{
+	dst = obstor.CopyDestOptions{
 		Bucket:          bucketName,
 		Object:          objectName,
 		ReplaceMetadata: true,
@@ -6327,13 +6327,13 @@ func testCopyObject() {
 		return
 	}
 
-	oi, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	oi, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
 	}
 
-	stOpts := minio.StatObjectOptions{}
+	stOpts := obstor.StatObjectOptions{}
 	stOpts.SetMatchETag(oi.ETag)
 	objInfo, err = c.StatObject(context.Background(), bucketName, objectName, stOpts)
 	if err != nil {
@@ -6359,16 +6359,16 @@ func testSSECEncryptedGetObjectReadSeekFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6397,7 +6397,7 @@ func testSSECEncryptedGetObjectReadSeekFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{
 		ContentType:          "binary/octet-stream",
 		ServerSideEncryption: encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+objectName)),
 	})
@@ -6407,7 +6407,7 @@ func testSSECEncryptedGetObjectReadSeekFunctional() {
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{
 		ServerSideEncryption: encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+objectName)),
 	})
 	if err != nil {
@@ -6527,16 +6527,16 @@ func testSSES3EncryptedGetObjectReadSeekFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6565,7 +6565,7 @@ func testSSES3EncryptedGetObjectReadSeekFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{
 		ContentType:          "binary/octet-stream",
 		ServerSideEncryption: encrypt.NewSSE(),
 	})
@@ -6575,7 +6575,7 @@ func testSSES3EncryptedGetObjectReadSeekFunctional() {
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -6693,16 +6693,16 @@ func testSSECEncryptedGetObjectReadAtFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6725,7 +6725,7 @@ func testSSECEncryptedGetObjectReadAtFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{
 		ContentType:          "binary/octet-stream",
 		ServerSideEncryption: encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+objectName)),
 	})
@@ -6735,7 +6735,7 @@ func testSSECEncryptedGetObjectReadAtFunctional() {
 	}
 
 	// read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{
 		ServerSideEncryption: encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+objectName)),
 	})
 	if err != nil {
@@ -6862,16 +6862,16 @@ func testSSES3EncryptedGetObjectReadAtFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -6894,7 +6894,7 @@ func testSSES3EncryptedGetObjectReadAtFunctional() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{
 		ContentType:          "binary/octet-stream",
 		ServerSideEncryption: encrypt.NewSSE(),
 	})
@@ -6904,7 +6904,7 @@ func testSSES3EncryptedGetObjectReadAtFunctional() {
 	}
 
 	// read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -7033,16 +7033,16 @@ func testSSECEncryptionPutGet() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -7077,14 +7077,14 @@ func testSSECEncryptionPutGet() {
 		args["sse"] = sse
 
 		// Put encrypted data
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(testCase.buf), int64(len(testCase.buf)), minio.PutObjectOptions{ServerSideEncryption: sse})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(testCase.buf), int64(len(testCase.buf)), obstor.PutObjectOptions{ServerSideEncryption: sse})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutEncryptedObject failed", err)
 			return
 		}
 
 		// Read the data back
-		r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{ServerSideEncryption: sse})
+		r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{ServerSideEncryption: sse})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetEncryptedObject failed", err)
 			return
@@ -7129,16 +7129,16 @@ func testSSECEncryptionFPut() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -7190,13 +7190,13 @@ func testSSECEncryptionFPut() {
 		}
 		file.Close()
 		// Put encrypted data
-		if _, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, minio.PutObjectOptions{ServerSideEncryption: sse}); err != nil {
+		if _, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, obstor.PutObjectOptions{ServerSideEncryption: sse}); err != nil {
 			logError(testName, function, args, startTime, "", "FPutEncryptedObject failed", err)
 			return
 		}
 
 		// Read the data back
-		r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{ServerSideEncryption: sse})
+		r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{ServerSideEncryption: sse})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetEncryptedObject failed", err)
 			return
@@ -7238,16 +7238,16 @@ func testSSES3EncryptionPutGet() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -7280,14 +7280,14 @@ func testSSES3EncryptionPutGet() {
 		args["sse"] = sse
 
 		// Put encrypted data
-		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(testCase.buf), int64(len(testCase.buf)), minio.PutObjectOptions{ServerSideEncryption: sse})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(testCase.buf), int64(len(testCase.buf)), obstor.PutObjectOptions{ServerSideEncryption: sse})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutEncryptedObject failed", err)
 			return
 		}
 
 		// Read the data back without any encryption headers
-		r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+		r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetEncryptedObject failed", err)
 			return
@@ -7332,16 +7332,16 @@ func testSSES3EncryptionFPut() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -7392,13 +7392,13 @@ func testSSES3EncryptionFPut() {
 		}
 		file.Close()
 		// Put encrypted data
-		if _, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, minio.PutObjectOptions{ServerSideEncryption: sse}); err != nil {
+		if _, err = c.FPutObject(context.Background(), bucketName, objectName, fileName, obstor.PutObjectOptions{ServerSideEncryption: sse}); err != nil {
 			logError(testName, function, args, startTime, "", "FPutEncryptedObject failed", err)
 			return
 		}
 
 		// Read the data back
-		r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+		r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetEncryptedObject failed", err)
 			return
@@ -7446,7 +7446,7 @@ func testBucketNotification() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
@@ -7527,18 +7527,18 @@ func testFunctional() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, nil, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, nil, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket.
 	function = "MakeBucket(bucketName, region)"
 	functionAll = "MakeBucket(bucketName, region)"
 	args["bucketName"] = bucketName
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 
 	defer cleanupBucket(bucketName, c)
 	if err != nil {
@@ -7719,7 +7719,7 @@ func testFunctional() {
 		"contentType": "",
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -7731,7 +7731,7 @@ func testFunctional() {
 		"contentType": "binary/octet-stream",
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName+"-nolength", bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName+"-nolength", bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -7752,7 +7752,7 @@ func testFunctional() {
 		"isRecursive": isRecursive,
 	}
 
-	for obj := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{UseV1: true, Prefix: objectName, Recursive: true}) {
+	for obj := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{UseV1: true, Prefix: objectName, Recursive: true}) {
 		if obj.Key == objectName {
 			objFound = true
 			break
@@ -7773,7 +7773,7 @@ func testFunctional() {
 		"isRecursive": isRecursive,
 	}
 
-	for obj := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{Prefix: objectName, Recursive: isRecursive}) {
+	for obj := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{Prefix: objectName, Recursive: isRecursive}) {
 		if obj.Key == objectName {
 			objFound = true
 			break
@@ -7811,7 +7811,7 @@ func testFunctional() {
 		"bucketName": bucketName,
 		"objectName": objectName,
 	}
-	newReader, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	newReader, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -7836,7 +7836,7 @@ func testFunctional() {
 		"objectName": objectName,
 		"fileName":   fileName + "-f",
 	}
-	err = c.FGetObject(context.Background(), bucketName, objectName, fileName+"-f", minio.GetObjectOptions{})
+	err = c.FGetObject(context.Background(), bucketName, objectName, fileName+"-f", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FGetObject failed", err)
 		return
@@ -8043,7 +8043,7 @@ func testFunctional() {
 		return
 	}
 
-	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presigned", minio.GetObjectOptions{})
+	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presigned", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject after PresignedPutObject failed", err)
 		return
@@ -8099,7 +8099,7 @@ func testFunctional() {
 		"bucketName": bucketName,
 		"objectName": objectName + "-presign-custom",
 	}
-	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presign-custom", minio.GetObjectOptions{})
+	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presign-custom", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject of uploaded custom-presigned object failed", err)
 		return
@@ -8123,34 +8123,34 @@ func testFunctional() {
 		"bucketName": bucketName,
 		"objectName": objectName,
 	}
-	err = c.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName, obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "RemoveObject failed", err)
 		return
 	}
 	args["objectName"] = objectName + "-f"
-	err = c.RemoveObject(context.Background(), bucketName, objectName+"-f", minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName+"-f", obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "RemoveObject failed", err)
 		return
 	}
 
 	args["objectName"] = objectName + "-nolength"
-	err = c.RemoveObject(context.Background(), bucketName, objectName+"-nolength", minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName+"-nolength", obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "RemoveObject failed", err)
 		return
 	}
 
 	args["objectName"] = objectName + "-presigned"
-	err = c.RemoveObject(context.Background(), bucketName, objectName+"-presigned", minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName+"-presigned", obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "RemoveObject failed", err)
 		return
 	}
 
 	args["objectName"] = objectName + "-presign-custom"
-	err = c.RemoveObject(context.Background(), bucketName, objectName+"-presign-custom", minio.RemoveObjectOptions{})
+	err = c.RemoveObject(context.Background(), bucketName, objectName+"-presign-custom", obstor.RemoveObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "RemoveObject failed", err)
 		return
@@ -8192,15 +8192,15 @@ func testGetObjectModified() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Make a new bucket.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8212,15 +8212,15 @@ func testGetObjectModified() {
 	objectName := "myobject"
 	args["objectName"] = objectName
 	content := "helloworld"
-	_, err = c.PutObject(context.Background(), bucketName, objectName, strings.NewReader(content), int64(len(content)), minio.PutObjectOptions{ContentType: "application/text"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, strings.NewReader(content), int64(len(content)), obstor.PutObjectOptions{ContentType: "application/text"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Failed to upload "+objectName+", to bucket "+bucketName, err)
 		return
 	}
 
-	defer c.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	defer c.RemoveObject(context.Background(), bucketName, objectName, obstor.RemoveObjectOptions{})
 
-	reader, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	reader, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Failed to GetObject "+objectName+", from bucket "+bucketName, err)
 		return
@@ -8237,7 +8237,7 @@ func testGetObjectModified() {
 
 	// Upload different contents to the same object while object is being read.
 	newContent := "goodbyeworld"
-	_, err = c.PutObject(context.Background(), bucketName, objectName, strings.NewReader(newContent), int64(len(newContent)), minio.PutObjectOptions{ContentType: "application/text"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, strings.NewReader(newContent), int64(len(newContent)), obstor.PutObjectOptions{ContentType: "application/text"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Failed to upload "+objectName+", to bucket "+bucketName, err)
 		return
@@ -8276,15 +8276,15 @@ func testPutObjectUploadSeekedObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Make a new bucket.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8301,7 +8301,7 @@ func testPutObjectUploadSeekedObject() {
 		}
 		args["fileToUpload"] = fileName
 	} else {
-		tempfile, err = os.CreateTemp("", "minio-go-upload-test-")
+		tempfile, err = os.CreateTemp("", "obstor-go-upload-test-")
 		if err != nil {
 			logError(testName, function, args, startTime, "", "TempFile create failed", err)
 			return
@@ -8329,14 +8329,14 @@ func testPutObjectUploadSeekedObject() {
 		return
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, tempfile, int64(length-offset), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, tempfile, int64(length-offset), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	tempfile.Close()
 
-	obj, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	obj, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -8353,12 +8353,12 @@ func testPutObjectUploadSeekedObject() {
 		return
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName+"getobject", obj, int64(length-offset), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName+"getobject", obj, int64(length-offset), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName+"getobject", minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName+"getobject", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -8384,31 +8384,31 @@ func testMakeBucketErrorV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	region := "eu-west-1"
 	args["bucketName"] = bucketName
 	args["region"] = region
 
 	// Make a new bucket in 'eu-west-1'.
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: region}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: region}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
 
 	defer cleanupBucket(bucketName, c)
 
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: region}); err == nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: region}); err == nil {
 		logError(testName, function, args, startTime, "", "MakeBucket did not fail for existing bucket name", err)
 		return
 	}
 	// Verify valid error response from server.
-	if minio.ToErrorResponse(err).Code != minio.BucketAlreadyExists &&
-		minio.ToErrorResponse(err).Code != minio.BucketAlreadyOwnedByYou {
+	if obstor.ToErrorResponse(err).Code != obstor.BucketAlreadyExists &&
+		obstor.ToErrorResponse(err).Code != obstor.BucketAlreadyOwnedByYou {
 		logError(testName, function, args, startTime, "", "Invalid error returned by server", err)
 		return
 	}
@@ -8429,16 +8429,16 @@ func testGetObjectClosedTwiceV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8455,14 +8455,14 @@ func testGetObjectClosedTwiceV2() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -8505,16 +8505,16 @@ func testFPutObjectV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8553,7 +8553,7 @@ func testFPutObjectV2() {
 	args["fileName"] = file.Name()
 
 	// Perform standard FPutObject with contentType provided (Expecting application/octet-stream)
-	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-standard", file.Name(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-standard", file.Name(), obstor.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
@@ -8563,7 +8563,7 @@ func testFPutObjectV2() {
 	args["objectName"] = objectName + "-Octet"
 	args["contentType"] = ""
 
-	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-Octet", file.Name(), minio.PutObjectOptions{})
+	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-Octet", file.Name(), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
@@ -8582,14 +8582,14 @@ func testFPutObjectV2() {
 	args["contentType"] = ""
 	args["fileName"] = fileName + ".gtar"
 
-	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-GTar", fileName+".gtar", minio.PutObjectOptions{})
+	_, err = c.FPutObject(context.Background(), bucketName, objectName+"-GTar", fileName+".gtar", obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FPutObject failed", err)
 		return
 	}
 
 	// Check headers and sizes
-	rStandard, err := c.StatObject(context.Background(), bucketName, objectName+"-standard", minio.StatObjectOptions{})
+	rStandard, err := c.StatObject(context.Background(), bucketName, objectName+"-standard", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -8605,7 +8605,7 @@ func testFPutObjectV2() {
 		return
 	}
 
-	rOctet, err := c.StatObject(context.Background(), bucketName, objectName+"-Octet", minio.StatObjectOptions{})
+	rOctet, err := c.StatObject(context.Background(), bucketName, objectName+"-Octet", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -8620,7 +8620,7 @@ func testFPutObjectV2() {
 		return
 	}
 
-	rGTar, err := c.StatObject(context.Background(), bucketName, objectName+"-GTar", minio.StatObjectOptions{})
+	rGTar, err := c.StatObject(context.Background(), bucketName, objectName+"-GTar", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -8651,16 +8651,16 @@ func testMakeBucketRegionsV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket in 'eu-central-1'.
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "eu-west-1"}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "eu-west-1"}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
@@ -8673,7 +8673,7 @@ func testMakeBucketRegionsV2() {
 	// Make a new bucket with '.' in its name, in 'us-west-2'. This
 	// request is internally staged into a path style instead of
 	// virtual host style.
-	if err = c.MakeBucket(context.Background(), bucketName+".withperiod", minio.MakeBucketOptions{Region: "us-west-2"}); err != nil {
+	if err = c.MakeBucket(context.Background(), bucketName+".withperiod", obstor.MakeBucketOptions{Region: "us-west-2"}); err != nil {
 		args["bucketName"] = bucketName + ".withperiod"
 		args["region"] = "us-west-2"
 		logError(testName, function, args, startTime, "", "MakeBucket test with a bucket name with period, '.', failed", err)
@@ -8699,16 +8699,16 @@ func testGetObjectReadSeekFunctionalV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8731,14 +8731,14 @@ func testGetObjectReadSeekFunctionalV2() {
 	}
 
 	// Save the data.
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -8839,16 +8839,16 @@ func testGetObjectReadAtFunctionalV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -8871,14 +8871,14 @@ func testGetObjectReadAtFunctionalV2() {
 	}
 
 	// Save the data
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Read the data back
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -8986,15 +8986,15 @@ func testCopyObjectV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9002,7 +9002,7 @@ func testCopyObjectV2() {
 	defer cleanupBucket(bucketName, c)
 
 	// Make a new bucket in 'us-east-1' (destination bucket).
-	err = c.MakeBucket(context.Background(), bucketName+"-copy", minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName+"-copy", obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9016,13 +9016,13 @@ func testCopyObjectV2() {
 
 	// Save the data
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9036,7 +9036,7 @@ func testCopyObjectV2() {
 	r.Close()
 
 	// Copy Source
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket:             bucketName,
 		Object:             objectName,
 		MatchModifiedSince: time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC),
@@ -9045,7 +9045,7 @@ func testCopyObjectV2() {
 	args["source"] = src
 
 	// Set copy conditions.
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName + "-copy",
 		Object: objectName + "-copy",
 	}
@@ -9059,13 +9059,13 @@ func testCopyObjectV2() {
 	}
 
 	// Source object
-	r, err = c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err = c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
 	}
 	// Destination object
-	readerCopy, err := c.GetObject(context.Background(), bucketName+"-copy", objectName+"-copy", minio.GetObjectOptions{})
+	readerCopy, err := c.GetObject(context.Background(), bucketName+"-copy", objectName+"-copy", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9092,7 +9092,7 @@ func testCopyObjectV2() {
 	readerCopy.Close()
 
 	// CopyObject again but with wrong conditions
-	src = minio.CopySrcOptions{
+	src = obstor.CopySrcOptions{
 		Bucket:               bucketName,
 		Object:               objectName,
 		MatchUnmodifiedSince: time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC),
@@ -9119,15 +9119,15 @@ func testCopyObjectWithChecksums() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9135,7 +9135,7 @@ func testCopyObjectWithChecksums() {
 	defer cleanupBucket(bucketName, c)
 
 	// Make a new bucket in 'us-east-1' (destination bucket).
-	err = c.MakeBucket(context.Background(), bucketName+"-copy", minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName+"-copy", obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9150,13 +9150,13 @@ func testCopyObjectWithChecksums() {
 	// PutObject to upload the object to the bucket, this object will have a Crc64NVME checksum applied
 	// by default since nothing was explicitly specified.
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	// GetObject to obtain the eTag
-	r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9169,7 +9169,7 @@ func testCopyObjectWithChecksums() {
 	r.Close()
 
 	// Copy source options
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket:             bucketName,
 		Object:             objectName,
 		MatchModifiedSince: time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC),
@@ -9177,17 +9177,17 @@ func testCopyObjectWithChecksums() {
 	}
 
 	tests := []struct {
-		csType minio.ChecksumType
+		csType obstor.ChecksumType
 		cs     wantChecksums
 	}{
-		{csType: minio.ChecksumCRC64NVME, cs: wantChecksums{minio.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
-		{csType: minio.ChecksumCRC32C, cs: wantChecksums{minio.ChecksumCRC32C: "aHnJMw=="}},
-		{csType: minio.ChecksumCRC32, cs: wantChecksums{minio.ChecksumCRC32: "tIZ8hA=="}},
-		{csType: minio.ChecksumSHA1, cs: wantChecksums{minio.ChecksumSHA1: "6YIIbcWH1iLaCFqs5vwq5Rwvm+o="}},
-		{csType: minio.ChecksumSHA256, cs: wantChecksums{minio.ChecksumSHA256: "GKeJTopbMGPs3h4fAw4oe0R2QnnmFVJeIWkqCkp28Yo="}},
+		{csType: obstor.ChecksumCRC64NVME, cs: wantChecksums{obstor.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
+		{csType: obstor.ChecksumCRC32C, cs: wantChecksums{obstor.ChecksumCRC32C: "aHnJMw=="}},
+		{csType: obstor.ChecksumCRC32, cs: wantChecksums{obstor.ChecksumCRC32: "tIZ8hA=="}},
+		{csType: obstor.ChecksumSHA1, cs: wantChecksums{obstor.ChecksumSHA1: "6YIIbcWH1iLaCFqs5vwq5Rwvm+o="}},
+		{csType: obstor.ChecksumSHA256, cs: wantChecksums{obstor.ChecksumSHA256: "GKeJTopbMGPs3h4fAw4oe0R2QnnmFVJeIWkqCkp28Yo="}},
 		// In S3, all copied objects without checksums and specified destination checksum algorithms
 		// automatically gain a CRC-64NVME checksum algorithm. Use ChecksumNone for this case.
-		{csType: minio.ChecksumNone, cs: wantChecksums{minio.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
+		{csType: obstor.ChecksumNone, cs: wantChecksums{obstor.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
 	}
 
 	for _, test := range tests {
@@ -9199,12 +9199,12 @@ func testCopyObjectWithChecksums() {
 		// Copy destination options
 		bucketCopyName := bucketName + "-copy"
 		objectCopyName := objectName + "-copy-" + test.csType.String()
-		dst := minio.CopyDestOptions{
+		dst := obstor.CopyDestOptions{
 			Bucket:          bucketCopyName,
 			Object:          objectCopyName,
 			ReplaceMetadata: true,
 		}
-		if test.csType != minio.ChecksumNone {
+		if test.csType != obstor.ChecksumNone {
 			// Request the server-side checksum on the copy.
 			// ChecksumNone is a flag to leave off the header
 			dst.ChecksumType = test.csType
@@ -9221,7 +9221,7 @@ func testCopyObjectWithChecksums() {
 
 		// Checksum verification
 		args["section"] = "HeadObject"
-		st, err := c.StatObject(context.Background(), bucketCopyName, objectCopyName, minio.StatObjectOptions{Checksum: true})
+		st, err := c.StatObject(context.Background(), bucketCopyName, objectCopyName, obstor.StatObjectOptions{Checksum: true})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObject failed", err)
 			return
@@ -9249,15 +9249,15 @@ func testReplaceObjectWithChecksums() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9265,17 +9265,17 @@ func testReplaceObjectWithChecksums() {
 	defer cleanupBucket(bucketName, c)
 
 	tests := []struct {
-		csType minio.ChecksumType
+		csType obstor.ChecksumType
 		cs     wantChecksums
 	}{
-		{csType: minio.ChecksumCRC64NVME, cs: wantChecksums{minio.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
-		{csType: minio.ChecksumCRC32C, cs: wantChecksums{minio.ChecksumCRC32C: "aHnJMw=="}},
-		{csType: minio.ChecksumCRC32, cs: wantChecksums{minio.ChecksumCRC32: "tIZ8hA=="}},
-		{csType: minio.ChecksumSHA1, cs: wantChecksums{minio.ChecksumSHA1: "6YIIbcWH1iLaCFqs5vwq5Rwvm+o="}},
-		{csType: minio.ChecksumSHA256, cs: wantChecksums{minio.ChecksumSHA256: "GKeJTopbMGPs3h4fAw4oe0R2QnnmFVJeIWkqCkp28Yo="}},
+		{csType: obstor.ChecksumCRC64NVME, cs: wantChecksums{obstor.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
+		{csType: obstor.ChecksumCRC32C, cs: wantChecksums{obstor.ChecksumCRC32C: "aHnJMw=="}},
+		{csType: obstor.ChecksumCRC32, cs: wantChecksums{obstor.ChecksumCRC32: "tIZ8hA=="}},
+		{csType: obstor.ChecksumSHA1, cs: wantChecksums{obstor.ChecksumSHA1: "6YIIbcWH1iLaCFqs5vwq5Rwvm+o="}},
+		{csType: obstor.ChecksumSHA256, cs: wantChecksums{obstor.ChecksumSHA256: "GKeJTopbMGPs3h4fAw4oe0R2QnnmFVJeIWkqCkp28Yo="}},
 		// In S3, all copied objects without checksums and specified destination checksum algorithms
 		// automatically gain a CRC-64NVME checksum algorithm. Use ChecksumNone for this case.
-		{csType: minio.ChecksumNone, cs: wantChecksums{minio.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
+		{csType: obstor.ChecksumNone, cs: wantChecksums{obstor.ChecksumCRC64NVME: "iRtfQH3xflQ="}},
 	}
 
 	for _, test := range tests {
@@ -9290,13 +9290,13 @@ func testReplaceObjectWithChecksums() {
 
 		// PutObject to upload the object to the bucket
 		objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
-		_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+		_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObject failed", err)
 			return
 		}
 		// GetObject to obtain the eTag
-		r, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+		r, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetObject failed", err)
 			return
@@ -9309,7 +9309,7 @@ func testReplaceObjectWithChecksums() {
 		r.Close()
 
 		// Copy source options
-		src := minio.CopySrcOptions{
+		src := obstor.CopySrcOptions{
 			Bucket:             bucketName,
 			Object:             objectName,
 			MatchModifiedSince: time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC),
@@ -9317,7 +9317,7 @@ func testReplaceObjectWithChecksums() {
 		}
 
 		// Copy destination options, overwrite the existing object
-		dst := minio.CopyDestOptions{
+		dst := obstor.CopyDestOptions{
 			Bucket: bucketName,
 			Object: objectName,
 			// S3 requires that we send some new metadata otherwise it complains that the
@@ -9327,7 +9327,7 @@ func testReplaceObjectWithChecksums() {
 			},
 			ReplaceMetadata: true,
 		}
-		if test.csType != minio.ChecksumNone {
+		if test.csType != obstor.ChecksumNone {
 			// Request the server-side checksum on the copy.
 			// ChecksumNone is a flag to leave off the header
 			dst.ChecksumType = test.csType
@@ -9344,7 +9344,7 @@ func testReplaceObjectWithChecksums() {
 
 		// Checksum verification
 		args["section"] = "HeadObject"
-		st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{Checksum: true})
+		st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{Checksum: true})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObject failed", err)
 			return
@@ -9363,7 +9363,7 @@ func testReplaceObjectWithChecksums() {
 	}
 }
 
-func testComposeObjectErrorCasesWrapper(c *minio.Client) {
+func testComposeObjectErrorCasesWrapper(c *obstor.Client) {
 	// initialize logging params
 	startTime := time.Now()
 	testName := getFuncName()
@@ -9371,10 +9371,10 @@ func testComposeObjectErrorCasesWrapper(c *minio.Client) {
 	args := map[string]interface{}{}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err := c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err := c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9384,9 +9384,9 @@ func testComposeObjectErrorCasesWrapper(c *minio.Client) {
 
 	// Test that more than 10K source objects cannot be
 	// concatenated.
-	srcArr := [10001]minio.CopySrcOptions{}
+	srcArr := [10001]obstor.CopySrcOptions{}
 	srcSlice := srcArr[:]
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "object",
 	}
@@ -9408,14 +9408,14 @@ func testComposeObjectErrorCasesWrapper(c *minio.Client) {
 	// 1. Create the source object.
 	const badSrcSize = 5 * 1024 * 1024
 	buf := bytes.Repeat([]byte("1"), badSrcSize)
-	_, err = c.PutObject(context.Background(), bucketName, "badObject", bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, "badObject", bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 	// 2. Set invalid range spec on the object (going beyond
 	// object size)
-	badSrc := minio.CopySrcOptions{
+	badSrc := obstor.CopySrcOptions{
 		Bucket:     bucketName,
 		Object:     "badObject",
 		MatchRange: true,
@@ -9445,14 +9445,14 @@ func testComposeObjectErrorCasesV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	testComposeObjectErrorCasesWrapper(c)
 }
 
-func testComposeMultipleSources(c *minio.Client) {
+func testComposeMultipleSources(c *obstor.Client) {
 	// initialize logging params
 	startTime := time.Now()
 	testName := getFuncName()
@@ -9463,9 +9463,9 @@ func testComposeMultipleSources(c *minio.Client) {
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err := c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err := c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9476,16 +9476,16 @@ func testComposeMultipleSources(c *minio.Client) {
 	// Upload a small source object
 	const srcSize = 1024 * 1024 * 5
 	buf := bytes.Repeat([]byte("1"), srcSize)
-	_, err = c.PutObject(context.Background(), bucketName, "srcObject", bytes.NewReader(buf), int64(srcSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, "srcObject", bytes.NewReader(buf), int64(srcSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// We will append 10 copies of the object.
-	srcs := []minio.CopySrcOptions{}
+	srcs := []obstor.CopySrcOptions{}
 	for i := 0; i < 10; i++ {
-		srcs = append(srcs, minio.CopySrcOptions{
+		srcs = append(srcs, obstor.CopySrcOptions{
 			Bucket: bucketName,
 			Object: "srcObject",
 		})
@@ -9496,7 +9496,7 @@ func testComposeMultipleSources(c *minio.Client) {
 
 	args["sourceList"] = srcs
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "dstObject",
 	}
@@ -9513,7 +9513,7 @@ func testComposeMultipleSources(c *minio.Client) {
 		return
 	}
 
-	objProps, err := c.StatObject(context.Background(), bucketName, "dstObject", minio.StatObjectOptions{})
+	objProps, err := c.StatObject(context.Background(), bucketName, "dstObject", obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -9537,7 +9537,7 @@ func testCompose10KSourcesV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
@@ -9553,15 +9553,15 @@ func testEncryptedEmptyObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9575,20 +9575,20 @@ func testEncryptedEmptyObject() {
 	const srcSize = 0
 	var buf []byte // Empty buffer
 	args["objectName"] = "object"
-	_, err = c.PutObject(context.Background(), bucketName, "object", bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ServerSideEncryption: sse})
+	_, err = c.PutObject(context.Background(), bucketName, "object", bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ServerSideEncryption: sse})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
 	}
 
 	// 2. Test CopyObject for an empty object
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket:     bucketName,
 		Object:     "object",
 		Encryption: sse,
 	}
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket:     bucketName,
 		Object:     "new-object",
 		Encryption: sse,
@@ -9602,13 +9602,13 @@ func testEncryptedEmptyObject() {
 
 	// 3. Test Key rotation
 	newSSE := encrypt.DefaultPBKDF([]byte("Don't Panic"), []byte(bucketName+"new-object"))
-	src = minio.CopySrcOptions{
+	src = obstor.CopySrcOptions{
 		Bucket:     bucketName,
 		Object:     "new-object",
 		Encryption: sse,
 	}
 
-	dst = minio.CopyDestOptions{
+	dst = obstor.CopyDestOptions{
 		Bucket:     bucketName,
 		Object:     "new-object",
 		Encryption: newSSE,
@@ -9621,7 +9621,7 @@ func testEncryptedEmptyObject() {
 	}
 
 	// 4. Download the object.
-	reader, err := c.GetObject(context.Background(), bucketName, "new-object", minio.GetObjectOptions{ServerSideEncryption: newSSE})
+	reader, err := c.GetObject(context.Background(), bucketName, "new-object", obstor.GetObjectOptions{ServerSideEncryption: newSSE})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9642,7 +9642,7 @@ func testEncryptedEmptyObject() {
 	logSuccess(testName, function, args, startTime)
 }
 
-func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, sseDst encrypt.ServerSide) {
+func testEncryptedCopyObjectWrapper(c *obstor.Client, bucketName string, sseSrc, sseDst encrypt.ServerSide) {
 	// initialize logging params
 	startTime := time.Now()
 	testName := getFuncNameLoc(2)
@@ -9652,7 +9652,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 	var srcEncryption, dstEncryption encrypt.ServerSide
 
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err := c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err := c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -9666,12 +9666,12 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 
 	// Calculate the CRC32C checksum for the object
 	meta := map[string]string{}
-	h := minio.ChecksumCRC32C.Hasher()
+	h := obstor.ChecksumCRC32C.Hasher()
 	h.Reset()
 	h.Write(buf)
-	meta[minio.ChecksumCRC32C.Key()] = base64.StdEncoding.EncodeToString(h.Sum(nil))
+	meta[obstor.ChecksumCRC32C.Key()] = base64.StdEncoding.EncodeToString(h.Sum(nil))
 
-	_, err = c.PutObject(context.Background(), bucketName, "srcObject", bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, "srcObject", bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{
 		ServerSideEncryption: sseSrc,
 		DisableMultipart:     true,
 		DisableContentSha256: true,
@@ -9687,14 +9687,14 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 	}
 
 	// 2. copy object and change encryption key
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket:     bucketName,
 		Object:     "srcObject",
 		Encryption: srcEncryption,
 	}
 	args["source"] = src
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket:     bucketName,
 		Object:     "dstObject",
 		Encryption: sseDst,
@@ -9711,8 +9711,8 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		dstEncryption = sseDst
 	}
 	// 3. get copied object and check if content is equal
-	coreClient := minio.Core{Client: c}
-	reader, oi, _, err := coreClient.GetObject(context.Background(), bucketName, "dstObject", minio.GetObjectOptions{ServerSideEncryption: dstEncryption, Checksum: true})
+	coreClient := obstor.Core{Client: c}
+	reader, oi, _, err := coreClient.GetObject(context.Background(), bucketName, "dstObject", obstor.GetObjectOptions{ServerSideEncryption: dstEncryption, Checksum: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9729,7 +9729,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 	}
 	reader.Close()
 
-	err = cmpChecksum(oi, wantChecksums{minio.ChecksumCRC32C: "bSoobA=="})
+	err = cmpChecksum(oi, wantChecksums{obstor.ChecksumCRC32C: "bSoobA=="})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Checksum mismatch on dstObject", err)
 		return
@@ -9744,7 +9744,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		newSSE = encrypt.NewSSE()
 	}
 	if newSSE != nil {
-		dst = minio.CopyDestOptions{
+		dst = obstor.CopyDestOptions{
 			Bucket:     bucketName,
 			Object:     "srcObject",
 			Encryption: newSSE,
@@ -9758,7 +9758,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		}
 
 		// Get copied object and check if content is equal
-		reader, oi, _, err = coreClient.GetObject(context.Background(), bucketName, "srcObject", minio.GetObjectOptions{ServerSideEncryption: newSSE, Checksum: true})
+		reader, oi, _, err = coreClient.GetObject(context.Background(), bucketName, "srcObject", obstor.GetObjectOptions{ServerSideEncryption: newSSE, Checksum: true})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "GetObject failed", err)
 			return
@@ -9775,7 +9775,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		}
 		reader.Close()
 
-		err = cmpChecksum(oi, wantChecksums{minio.ChecksumCRC32C: "bSoobA=="})
+		err = cmpChecksum(oi, wantChecksums{obstor.ChecksumCRC32C: "bSoobA=="})
 		if err != nil {
 			fmt.Printf("srcObject objectInfo: %+v\n", oi)
 			logError(testName, function, args, startTime, "", "Checksum mismatch on srcObject for in-place", err)
@@ -9783,13 +9783,13 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		}
 
 		// Test in-place decryption.
-		dst = minio.CopyDestOptions{
+		dst = obstor.CopyDestOptions{
 			Bucket: bucketName,
 			Object: "srcObject",
 		}
 		args["destination"] = dst
 
-		src = minio.CopySrcOptions{
+		src = obstor.CopySrcOptions{
 			Bucket:     bucketName,
 			Object:     "srcObject",
 			Encryption: newSSE,
@@ -9803,7 +9803,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 	}
 
 	// Get copied decrypted object and check if content is equal
-	reader, oi, _, err = coreClient.GetObject(context.Background(), bucketName, "srcObject", minio.GetObjectOptions{Checksum: true})
+	reader, oi, _, err = coreClient.GetObject(context.Background(), bucketName, "srcObject", obstor.GetObjectOptions{Checksum: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -9820,7 +9820,7 @@ func testEncryptedCopyObjectWrapper(c *minio.Client, bucketName string, sseSrc, 
 		return
 	}
 
-	err = cmpChecksum(oi, wantChecksums{minio.ChecksumCRC32C: "bSoobA=="})
+	err = cmpChecksum(oi, wantChecksums{obstor.ChecksumCRC32C: "bSoobA=="})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Checksum mismatch for decrypted object", err)
 		return
@@ -9839,11 +9839,11 @@ func testUnencryptedToSSECCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseDst := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"dstObject"))
 	testEncryptedCopyObjectWrapper(c, bucketName, nil, sseDst)
@@ -9859,11 +9859,11 @@ func testUnencryptedToSSES3CopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	var sseSrc encrypt.ServerSide
 	sseDst := encrypt.NewSSE()
@@ -9880,11 +9880,11 @@ func testUnencryptedToUnencryptedCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	var sseSrc, sseDst encrypt.ServerSide
 	testEncryptedCopyObjectWrapper(c, bucketName, sseSrc, sseDst)
@@ -9900,11 +9900,11 @@ func testEncryptedSSECToSSECCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"srcObject"))
 	sseDst := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"dstObject"))
@@ -9921,11 +9921,11 @@ func testEncryptedSSECToSSES3CopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"srcObject"))
 	sseDst := encrypt.NewSSE()
@@ -9942,11 +9942,11 @@ func testEncryptedSSECToUnencryptedCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"srcObject"))
 	var sseDst encrypt.ServerSide
@@ -9963,11 +9963,11 @@ func testEncryptedSSES3ToSSECCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.NewSSE()
 	sseDst := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"dstObject"))
@@ -9984,11 +9984,11 @@ func testEncryptedSSES3ToSSES3CopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.NewSSE()
 	sseDst := encrypt.NewSSE()
@@ -10005,11 +10005,11 @@ func testEncryptedSSES3ToUnencryptedCopyObject() {
 
 	c, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.NewSSE()
 	var sseDst encrypt.ServerSide
@@ -10026,11 +10026,11 @@ func testEncryptedCopyObjectV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true, TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 
 	sseSrc := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"srcObject"))
 	sseDst := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+"dstObject"))
@@ -10046,12 +10046,12 @@ func testDecryptedCopyObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
-	bucketName, objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-"), "object"
-	if err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"}); err != nil {
+	bucketName, objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-"), "object"
+	if err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"}); err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
@@ -10059,7 +10059,7 @@ func testDecryptedCopyObject() {
 	defer cleanupBucket(bucketName, c)
 
 	encryption := encrypt.DefaultPBKDF([]byte("correct horse battery staple"), []byte(bucketName+objectName))
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(bytes.Repeat([]byte("a"), 1024*1024)), 1024*1024, minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(bytes.Repeat([]byte("a"), 1024*1024)), 1024*1024, obstor.PutObjectOptions{
 		ServerSideEncryption: encryption,
 	})
 	if err != nil {
@@ -10067,14 +10067,14 @@ func testDecryptedCopyObject() {
 		return
 	}
 
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket:     bucketName,
 		Object:     objectName,
 		Encryption: encrypt.SSECopy(encryption),
 	}
 	args["source"] = src
 
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "decrypted-" + objectName,
 	}
@@ -10084,7 +10084,7 @@ func testDecryptedCopyObject() {
 		logError(testName, function, args, startTime, "", "CopyObject failed", err)
 		return
 	}
-	if _, err = c.GetObject(context.Background(), bucketName, "decrypted-"+objectName, minio.GetObjectOptions{}); err != nil {
+	if _, err = c.GetObject(context.Background(), bucketName, "decrypted-"+objectName, obstor.GetObjectOptions{}); err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
 	}
@@ -10100,18 +10100,18 @@ func testSSECMultipartEncryptedToSSECCopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10126,43 +10126,43 @@ func testSSECMultipartEncryptedToSSECCopyObjectPart() {
 	srcencryption := encrypt.DefaultPBKDF([]byte(password), []byte(bucketName+objectName))
 
 	// Upload a 6MB object using multipart mechanism
-	uploadID, err := c.NewMultipartUpload(context.Background(), bucketName, objectName, minio.PutObjectOptions{ServerSideEncryption: srcencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), bucketName, objectName, obstor.PutObjectOptions{ServerSideEncryption: srcencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
 	}
 
-	var completeParts []minio.CompletePart
+	var completeParts []obstor.CompletePart
 
 	part, err := c.PutObjectPart(context.Background(), bucketName, objectName, uploadID, 1,
 		bytes.NewReader(buf[:5*1024*1024]), 5*1024*1024,
-		minio.PutObjectPartOptions{SSE: srcencryption},
+		obstor.PutObjectPartOptions{SSE: srcencryption},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectPart call failed", err)
 		return
 	}
-	completeParts = append(completeParts, minio.CompletePart{PartNumber: part.PartNumber, ETag: part.ETag})
+	completeParts = append(completeParts, obstor.CompletePart{PartNumber: part.PartNumber, ETag: part.ETag})
 
 	part, err = c.PutObjectPart(context.Background(), bucketName, objectName, uploadID, 2,
 		bytes.NewReader(buf[5*1024*1024:]), 1024*1024,
-		minio.PutObjectPartOptions{SSE: srcencryption},
+		obstor.PutObjectPartOptions{SSE: srcencryption},
 	)
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectPart call failed", err)
 		return
 	}
-	completeParts = append(completeParts, minio.CompletePart{PartNumber: part.PartNumber, ETag: part.ETag})
+	completeParts = append(completeParts, obstor.CompletePart{PartNumber: part.PartNumber, ETag: part.ETag})
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), bucketName, objectName, uploadID, completeParts, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), bucketName, objectName, uploadID, completeParts, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcencryption})
+	objInfo, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10172,7 +10172,7 @@ func testSSECMultipartEncryptedToSSECCopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.DefaultPBKDF([]byte(password), []byte(destBucketName+destObjectName))
 
-	uploadID, err = c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err = c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -10213,14 +10213,14 @@ func testSSECMultipartEncryptedToSSECCopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err = c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{ServerSideEncryption: dstencryption})
+	objInfo, err = c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10232,7 +10232,7 @@ func testSSECMultipartEncryptedToSSECCopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{ServerSideEncryption: dstencryption}
+	getOpts := obstor.GetObjectOptions{ServerSideEncryption: dstencryption}
 	getOpts.SetRange(0, 6*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -10286,18 +10286,18 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10313,7 +10313,7 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 	putmetadata := map[string]string{
 		"Content-Type": "binary/octet-stream",
 	}
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata:         putmetadata,
 		ServerSideEncryption: srcencryption,
 	}
@@ -10323,7 +10323,7 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcencryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10338,7 +10338,7 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.DefaultPBKDF([]byte(password), []byte(destBucketName+destObjectName))
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -10379,14 +10379,14 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{ServerSideEncryption: dstencryption})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10398,7 +10398,7 @@ func testSSECEncryptedToSSECCopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{ServerSideEncryption: dstencryption}
+	getOpts := obstor.GetObjectOptions{ServerSideEncryption: dstencryption}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -10452,18 +10452,18 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10477,7 +10477,7 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 	password := "correct horse battery staple"
 	srcencryption := encrypt.DefaultPBKDF([]byte(password), []byte(bucketName+objectName))
 
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: map[string]string{
 			"Content-Type": "binary/octet-stream",
 		},
@@ -10489,7 +10489,7 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcencryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10504,7 +10504,7 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 	destObjectName := objectName + "-dest"
 	var dstencryption encrypt.ServerSide
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -10544,14 +10544,14 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10563,7 +10563,7 @@ func testSSECEncryptedToUnencryptedCopyPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -10617,18 +10617,18 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10644,7 +10644,7 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 	putmetadata := map[string]string{
 		"Content-Type": "binary/octet-stream",
 	}
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata:         putmetadata,
 		ServerSideEncryption: srcencryption,
 	}
@@ -10655,7 +10655,7 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcencryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10670,7 +10670,7 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.NewSSE()
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -10712,14 +10712,14 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10731,7 +10731,7 @@ func testSSECEncryptedToSSES3CopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -10785,18 +10785,18 @@ func testUnencryptedToSSECCopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{TrailingHeaders: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10811,7 +10811,7 @@ func testUnencryptedToSSECCopyObjectPart() {
 	putmetadata := map[string]string{
 		"Content-Type": "binary/octet-stream",
 	}
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: putmetadata,
 	}
 	uploadInfo, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), "", "", opts)
@@ -10820,7 +10820,7 @@ func testUnencryptedToSSECCopyObjectPart() {
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10835,7 +10835,7 @@ func testUnencryptedToSSECCopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.DefaultPBKDF([]byte(password), []byte(destBucketName+destObjectName))
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -10875,14 +10875,14 @@ func testUnencryptedToSSECCopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{ServerSideEncryption: dstencryption})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10894,7 +10894,7 @@ func testUnencryptedToSSECCopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{ServerSideEncryption: dstencryption}
+	getOpts := obstor.GetObjectOptions{ServerSideEncryption: dstencryption}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -10948,18 +10948,18 @@ func testUnencryptedToUnencryptedCopyPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -10973,7 +10973,7 @@ func testUnencryptedToUnencryptedCopyPart() {
 	putmetadata := map[string]string{
 		"Content-Type": "binary/octet-stream",
 	}
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: putmetadata,
 	}
 	uploadInfo, err := c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), "", "", opts)
@@ -10981,7 +10981,7 @@ func testUnencryptedToUnencryptedCopyPart() {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -10995,7 +10995,7 @@ func testUnencryptedToUnencryptedCopyPart() {
 	destBucketName := bucketName
 	destObjectName := objectName + "-dest"
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -11034,14 +11034,14 @@ func testUnencryptedToUnencryptedCopyPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11053,7 +11053,7 @@ func testUnencryptedToUnencryptedCopyPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -11107,18 +11107,18 @@ func testUnencryptedToSSES3CopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11129,7 +11129,7 @@ func testUnencryptedToSSES3CopyObjectPart() {
 
 	// Save the data
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: map[string]string{
 			"Content-Type": "binary/octet-stream",
 		},
@@ -11139,7 +11139,7 @@ func testUnencryptedToSSES3CopyObjectPart() {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11154,7 +11154,7 @@ func testUnencryptedToSSES3CopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.NewSSE()
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -11195,14 +11195,14 @@ func testUnencryptedToSSES3CopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11214,7 +11214,7 @@ func testUnencryptedToSSES3CopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -11268,18 +11268,18 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11292,7 +11292,7 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	password := "correct horse battery staple"
 	srcEncryption := encrypt.NewSSE()
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: map[string]string{
 			"Content-Type": "binary/octet-stream",
 		},
@@ -11304,7 +11304,7 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcEncryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcEncryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11319,7 +11319,7 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.DefaultPBKDF([]byte(password), []byte(destBucketName+destObjectName))
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -11359,14 +11359,14 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{ServerSideEncryption: dstencryption})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11378,7 +11378,7 @@ func testSSES3EncryptedToSSECCopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{ServerSideEncryption: dstencryption}
+	getOpts := obstor.GetObjectOptions{ServerSideEncryption: dstencryption}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -11432,18 +11432,18 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11455,7 +11455,7 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 	// Save the data
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	srcEncryption := encrypt.NewSSE()
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: map[string]string{
 			"Content-Type": "binary/octet-stream",
 		},
@@ -11466,7 +11466,7 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcEncryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcEncryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11480,7 +11480,7 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 	destBucketName := bucketName
 	destObjectName := objectName + "-dest"
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -11519,14 +11519,14 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11538,7 +11538,7 @@ func testSSES3EncryptedToUnencryptedCopyPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -11592,18 +11592,18 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 
 	client, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Instantiate new core client object.
-	c := minio.Core{Client: client}
+	c := obstor.Core{Client: client}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11615,7 +11615,7 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 	// Save the data
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	srcEncryption := encrypt.NewSSE()
-	opts := minio.PutObjectOptions{
+	opts := obstor.PutObjectOptions{
 		UserMetadata: map[string]string{
 			"Content-Type": "binary/octet-stream",
 		},
@@ -11627,7 +11627,7 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{ServerSideEncryption: srcEncryption})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{ServerSideEncryption: srcEncryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11641,7 +11641,7 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 	destObjectName := objectName + "-dest"
 	dstencryption := encrypt.NewSSE()
 
-	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, minio.PutObjectOptions{ServerSideEncryption: dstencryption})
+	uploadID, err := c.NewMultipartUpload(context.Background(), destBucketName, destObjectName, obstor.PutObjectOptions{ServerSideEncryption: dstencryption})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "NewMultipartUpload call failed", err)
 		return
@@ -11682,14 +11682,14 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 	}
 
 	// Complete the multipart upload
-	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []minio.CompletePart{fstPart, sndPart, lstPart}, minio.PutObjectOptions{})
+	_, err = c.CompleteMultipartUpload(context.Background(), destBucketName, destObjectName, uploadID, []obstor.CompletePart{fstPart, sndPart, lstPart}, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "CompleteMultipartUpload call failed", err)
 		return
 	}
 
 	// Stat the object and check its length matches
-	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, minio.StatObjectOptions{})
+	objInfo, err := c.StatObject(context.Background(), destBucketName, destObjectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject call failed", err)
 		return
@@ -11701,7 +11701,7 @@ func testSSES3EncryptedToSSES3CopyObjectPart() {
 	}
 
 	// Now we read the data back
-	getOpts := minio.GetObjectOptions{}
+	getOpts := obstor.GetObjectOptions{}
 	getOpts.SetRange(0, 5*1024*1024-1)
 	r, _, _, err := c.GetObject(context.Background(), destBucketName, destObjectName, getOpts)
 	if err != nil {
@@ -11754,14 +11754,14 @@ func testUserMetadataCopying() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	testUserMetadataCopyingWrapper(c)
 }
 
-func testUserMetadataCopyingWrapper(c *minio.Client) {
+func testUserMetadataCopyingWrapper(c *obstor.Client) {
 	// initialize logging params
 	startTime := time.Now()
 	testName := getFuncName()
@@ -11769,9 +11769,9 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	args := map[string]interface{}{}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err := c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err := c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11780,7 +11780,7 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	defer cleanupBucket(bucketName, c)
 
 	fetchMeta := func(object string) (h http.Header) {
-		objInfo, err := c.StatObject(context.Background(), bucketName, object, minio.StatObjectOptions{})
+		objInfo, err := c.StatObject(context.Background(), bucketName, object, obstor.StatObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "Stat failed", err)
 			return h
@@ -11802,7 +11802,7 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	m := make(map[string]string)
 	m["x-amz-meta-myheader"] = "myvalue"
 	_, err = c.PutObject(context.Background(), bucketName, "srcObject",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{UserMetadata: m})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{UserMetadata: m})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectWithMetadata failed", err)
 		return
@@ -11813,13 +11813,13 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	}
 
 	// 2. create source
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket: bucketName,
 		Object: "srcObject",
 	}
 
 	// 2.1 create destination with metadata set
-	dst1 := minio.CopyDestOptions{
+	dst1 := obstor.CopyDestOptions{
 		Bucket:          bucketName,
 		Object:          "dstObject-1",
 		UserMetadata:    map[string]string{"notmyheader": "notmyvalue"},
@@ -11844,7 +11844,7 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	}
 
 	// 4. create destination with no metadata set and same source
-	dst2 := minio.CopyDestOptions{
+	dst2 := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "dstObject-2",
 	}
@@ -11866,14 +11866,14 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	}
 
 	// 6. Compose a pair of sources.
-	dst3 := minio.CopyDestOptions{
+	dst3 := obstor.CopyDestOptions{
 		Bucket:          bucketName,
 		Object:          "dstObject-3",
 		ReplaceMetadata: true,
 	}
 
 	function = "ComposeObject(destination, sources)"
-	args["source"] = []minio.CopySrcOptions{src, src}
+	args["source"] = []obstor.CopySrcOptions{src, src}
 	args["destination"] = dst3
 	_, err = c.ComposeObject(context.Background(), dst3, src, src)
 	if err != nil {
@@ -11888,7 +11888,7 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	}
 
 	// 7. Compose a pair of sources with dest user metadata set.
-	dst4 := minio.CopyDestOptions{
+	dst4 := obstor.CopyDestOptions{
 		Bucket:          bucketName,
 		Object:          "dstObject-4",
 		UserMetadata:    map[string]string{"notmyheader": "notmyvalue"},
@@ -11896,7 +11896,7 @@ func testUserMetadataCopyingWrapper(c *minio.Client) {
 	}
 
 	function = "ComposeObject(destination, sources)"
-	args["source"] = []minio.CopySrcOptions{src, src}
+	args["source"] = []obstor.CopySrcOptions{src, src}
 	args["destination"] = dst4
 	_, err = c.ComposeObject(context.Background(), dst4, src, src)
 	if err != nil {
@@ -11924,7 +11924,7 @@ func testUserMetadataCopyingV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v2 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v2 object creation failed", err)
 		return
 	}
 
@@ -11940,14 +11940,14 @@ func testStorageClassMetadataPutObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -11956,7 +11956,7 @@ func testStorageClassMetadataPutObject() {
 	defer cleanupBucket(bucketName, c)
 
 	fetchMeta := func(object string) (h http.Header) {
-		objInfo, err := c.StatObject(context.Background(), bucketName, object, minio.StatObjectOptions{})
+		objInfo, err := c.StatObject(context.Background(), bucketName, object, obstor.StatObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "Stat failed", err)
 			return h
@@ -11981,7 +11981,7 @@ func testStorageClassMetadataPutObject() {
 	buf := bytes.Repeat([]byte("abcde"), srcSize) // gives a buffer of 1MiB
 
 	_, err = c.PutObject(context.Background(), bucketName, "srcObjectRRSClass",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{StorageClass: "REDUCED_REDUNDANCY"})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{StorageClass: "REDUCED_REDUNDANCY"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -12000,7 +12000,7 @@ func testStorageClassMetadataPutObject() {
 	metadata.Set("x-amz-storage-class", "STANDARD")
 
 	_, err = c.PutObject(context.Background(), bucketName, "srcObjectSSClass",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{StorageClass: "STANDARD"})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{StorageClass: "STANDARD"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -12022,14 +12022,14 @@ func testStorageClassInvalidMetadataPutObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12041,7 +12041,7 @@ func testStorageClassInvalidMetadataPutObject() {
 	buf := bytes.Repeat([]byte("abcde"), srcSize) // gives a buffer of 1MiB
 
 	_, err = c.PutObject(context.Background(), bucketName, "srcObjectRRSClass",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{StorageClass: "INVALID_STORAGE_CLASS"})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{StorageClass: "INVALID_STORAGE_CLASS"})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "PutObject with invalid storage class passed, was expected to fail", err)
 		return
@@ -12059,14 +12059,14 @@ func testStorageClassMetadataCopyObject() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v4 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v4 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 	// Make a new bucket in 'us-east-1' (source bucket).
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12075,7 +12075,7 @@ func testStorageClassMetadataCopyObject() {
 	defer cleanupBucket(bucketName, c)
 
 	fetchMeta := func(object string) (h http.Header) {
-		objInfo, err := c.StatObject(context.Background(), bucketName, object, minio.StatObjectOptions{})
+		objInfo, err := c.StatObject(context.Background(), bucketName, object, obstor.StatObjectOptions{})
 		args["bucket"] = bucketName
 		args["object"] = object
 		if err != nil {
@@ -12103,18 +12103,18 @@ func testStorageClassMetadataCopyObject() {
 
 	// Put an object with RRS Storage class
 	_, err = c.PutObject(context.Background(), bucketName, "srcObjectRRSClass",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{StorageClass: "REDUCED_REDUNDANCY"})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{StorageClass: "REDUCED_REDUNDANCY"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Make server side copy of object uploaded in previous step
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket: bucketName,
 		Object: "srcObjectRRSClass",
 	}
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "srcObjectRRSClassCopy",
 	}
@@ -12137,18 +12137,18 @@ func testStorageClassMetadataCopyObject() {
 
 	// Put an object with Standard Storage class
 	_, err = c.PutObject(context.Background(), bucketName, "srcObjectSSClass",
-		bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{StorageClass: "STANDARD"})
+		bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{StorageClass: "STANDARD"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
 	// Make server side copy of object uploaded in previous step
-	src = minio.CopySrcOptions{
+	src = obstor.CopySrcOptions{
 		Bucket: bucketName,
 		Object: "srcObjectSSClass",
 	}
-	dst = minio.CopyDestOptions{
+	dst = obstor.CopyDestOptions{
 		Bucket: bucketName,
 		Object: "srcObjectSSClassCopy",
 	}
@@ -12180,16 +12180,16 @@ func testPutObjectNoLengthV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12206,13 +12206,13 @@ func testPutObjectNoLengthV2() {
 	args["size"] = bufSize
 
 	// Upload an object.
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, -1, minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, -1, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectWithSize failed", err)
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -12241,16 +12241,16 @@ func testPutObjectsUnknownV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12275,7 +12275,7 @@ func testPutObjectsUnknownV2() {
 		objectName := fmt.Sprintf("%sunique%d", bucketName, i)
 		args["objectName"] = objectName
 
-		ui, err := c.PutObject(context.Background(), bucketName, objectName, rpipe, -1, minio.PutObjectOptions{})
+		ui, err := c.PutObject(context.Background(), bucketName, objectName, rpipe, -1, obstor.PutObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "PutObjectStreaming failed", err)
 			return
@@ -12286,7 +12286,7 @@ func testPutObjectsUnknownV2() {
 			return
 		}
 
-		st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+		st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "StatObjectStreaming failed", err)
 			return
@@ -12317,16 +12317,16 @@ func testPutObject0ByteV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12336,15 +12336,15 @@ func testPutObject0ByteV2() {
 
 	objectName := bucketName + "unique"
 	args["objectName"] = objectName
-	args["opts"] = minio.PutObjectOptions{}
+	args["opts"] = obstor.PutObjectOptions{}
 
 	// Upload an object.
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader([]byte("")), 0, obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectWithSize failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObjectWithSize failed", err)
 		return
@@ -12389,16 +12389,16 @@ func testPutObjectMetadataNonUSASCIIV2() {
 	}
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12408,17 +12408,17 @@ func testPutObjectMetadataNonUSASCIIV2() {
 
 	objectName := bucketName + "unique"
 	args["objectName"] = objectName
-	args["opts"] = minio.PutObjectOptions{}
+	args["opts"] = obstor.PutObjectOptions{}
 
 	// Upload an object.
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader([]byte("")), 0, obstor.PutObjectOptions{
 		UserMetadata: metadata,
 	})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObjectWithSize failed", err)
 		return
 	}
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObjectWithSize failed", err)
 		return
@@ -12451,7 +12451,7 @@ func testComposeObjectErrorCases() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
@@ -12468,7 +12468,7 @@ func testCompose10KSources() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
@@ -12486,12 +12486,12 @@ func testFunctionalV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v2 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v2 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	location := "us-east-1"
 	// Make a new bucket.
 	function = "MakeBucket(bucketName, location)"
@@ -12500,7 +12500,7 @@ func testFunctionalV2() {
 		"bucketName": bucketName,
 		"location":   location,
 	}
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: location})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: location})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12596,13 +12596,13 @@ func testFunctionalV2() {
 		"objectName":  objectName,
 		"contentType": "",
 	}
-	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
 
-	st, err := c.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+	st, err := c.StatObject(context.Background(), bucketName, objectName, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -12614,12 +12614,12 @@ func testFunctionalV2() {
 
 	objectNameNoLength := objectName + "-nolength"
 	args["objectName"] = objectNameNoLength
-	_, err = c.PutObject(context.Background(), bucketName, objectNameNoLength, bytes.NewReader(buf), int64(len(buf)), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectNameNoLength, bytes.NewReader(buf), int64(len(buf)), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
 	}
-	st, err = c.StatObject(context.Background(), bucketName, objectNameNoLength, minio.StatObjectOptions{})
+	st, err = c.StatObject(context.Background(), bucketName, objectNameNoLength, obstor.StatObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "StatObject failed", err)
 		return
@@ -12642,7 +12642,7 @@ func testFunctionalV2() {
 		"objectName":  objectName,
 		"isRecursive": isRecursive,
 	}
-	for obj := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{UseV1: true, Prefix: objectName, Recursive: isRecursive}) {
+	for obj := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{UseV1: true, Prefix: objectName, Recursive: isRecursive}) {
 		if obj.Key == objectName {
 			objFound = true
 			break
@@ -12678,7 +12678,7 @@ func testFunctionalV2() {
 		"bucketName": bucketName,
 		"objectName": objectName,
 	}
-	newReader, err := c.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	newReader, err := c.GetObject(context.Background(), bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -12703,7 +12703,7 @@ func testFunctionalV2() {
 		"objectName": objectName,
 		"fileName":   fileName + "-f",
 	}
-	err = c.FGetObject(context.Background(), bucketName, objectName, fileName+"-f", minio.GetObjectOptions{})
+	err = c.FGetObject(context.Background(), bucketName, objectName, fileName+"-f", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FgetObject failed", err)
 		return
@@ -12871,7 +12871,7 @@ func testFunctionalV2() {
 		"bucketName": bucketName,
 		"objectName": objectName + "-presigned",
 	}
-	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presigned", minio.GetObjectOptions{})
+	newReader, err = c.GetObject(context.Background(), bucketName, objectName+"-presigned", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject of uploaded presigned object failed", err)
 		return
@@ -12926,16 +12926,16 @@ func testGetObjectContext() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -12950,7 +12950,7 @@ func testGetObjectContext() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -12960,7 +12960,7 @@ func testGetObjectContext() {
 	args["ctx"] = ctx
 	cancel()
 
-	r, err := c.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(ctx, bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed unexpectedly", err)
 		return
@@ -12977,7 +12977,7 @@ func testGetObjectContext() {
 	defer cancel()
 
 	// Read the data back
-	r, err = c.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+	r, err = c.GetObject(ctx, bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed", err)
 		return
@@ -13015,16 +13015,16 @@ func testFGetObjectContext() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13039,7 +13039,7 @@ func testFGetObjectContext() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -13052,7 +13052,7 @@ func testFGetObjectContext() {
 	fileName := "tempfile-context"
 	args["fileName"] = fileName
 	// Read the data back
-	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-f", minio.GetObjectOptions{})
+	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-f", obstor.GetObjectOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "FGetObject should fail on short timeout", err)
 		return
@@ -13061,7 +13061,7 @@ func testFGetObjectContext() {
 	defer cancel()
 
 	// Read the data back
-	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-fcontext", minio.GetObjectOptions{})
+	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-fcontext", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FGetObject with long timeout failed", err)
 		return
@@ -13092,16 +13092,16 @@ func testGetObjectRanges() {
 	rng := rand.NewSource(time.Now().UnixNano())
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rng, "minio-go-test-")
+	bucketName := randString(60, rng, "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13116,7 +13116,7 @@ func testGetObjectRanges() {
 	objectName := randString(60, rng, "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -13156,7 +13156,7 @@ func testGetObjectRanges() {
 		wantRC := getDataReader("datafile-129-MB")
 		io.CopyN(io.Discard, wantRC, test.start)
 		want := mustCrcReader(io.LimitReader(wantRC, test.end-test.start+1))
-		opts := minio.GetObjectOptions{}
+		opts := obstor.GetObjectOptions{}
 		opts.SetRange(test.start, test.end)
 		args["opts"] = fmt.Sprintf("%+v", test)
 		obj, err := c.GetObject(ctx, bucketName, objectName, opts)
@@ -13188,16 +13188,16 @@ func testGetObjectACLContext() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13219,7 +13219,7 @@ func testGetObjectACLContext() {
 
 	_, err = c.PutObject(context.Background(), bucketName,
 		objectName, reader, int64(bufSize),
-		minio.PutObjectOptions{
+		obstor.PutObjectOptions{
 			ContentType:  "binary/octet-stream",
 			UserMetadata: metaData,
 		})
@@ -13275,11 +13275,11 @@ func testGetObjectACLContext() {
 
 	// Add meta data to add a canned acl
 	metaData = map[string]string{
-		"X-Amz-Grant-Read":  "id=fooread@minio.go",
-		"X-Amz-Grant-Write": "id=foowrite@minio.go",
+		"X-Amz-Grant-Read":  "id=fooread@obstor.go",
+		"X-Amz-Grant-Write": "id=foowrite@obstor.go",
 	}
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader2, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream", UserMetadata: metaData})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader2, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream", UserMetadata: metaData})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject failed", err)
 		return
@@ -13312,8 +13312,8 @@ func testGetObjectACLContext() {
 		return
 	}
 
-	if s[0] != "fooread@minio.go" {
-		logError(testName, function, args, startTime, "", "GetObjectACL fail \"X-Amz-Grant-Read\" acl expected \"fooread@minio.go\" got "+fmt.Sprintf("%q", s), nil)
+	if s[0] != "fooread@obstor.go" {
+		logError(testName, function, args, startTime, "", "GetObjectACL fail \"X-Amz-Grant-Read\" acl expected \"fooread@obstor.go\" got "+fmt.Sprintf("%q", s), nil)
 		return
 	}
 
@@ -13328,8 +13328,8 @@ func testGetObjectACLContext() {
 		return
 	}
 
-	if s[0] != "foowrite@minio.go" {
-		logError(testName, function, args, startTime, "", "GetObjectACL fail \"X-Amz-Grant-Write\" acl expected \"foowrite@minio.go\" got "+fmt.Sprintf("%q", s), nil)
+	if s[0] != "foowrite@obstor.go" {
+		logError(testName, function, args, startTime, "", "GetObjectACL fail \"X-Amz-Grant-Write\" acl expected \"foowrite@obstor.go\" got "+fmt.Sprintf("%q", s), nil)
 		return
 	}
 
@@ -13351,15 +13351,15 @@ func testPutObjectContextV2() {
 	}
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Make a new bucket.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13377,7 +13377,7 @@ func testPutObjectContextV2() {
 	args["size"] = bufSize
 	defer cancel()
 
-	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject with short timeout failed", err)
 		return
@@ -13389,7 +13389,7 @@ func testPutObjectContextV2() {
 	defer cancel()
 	reader = getDataReader("datafile-33-kB")
 	defer reader.Close()
-	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject with long timeout failed", err)
 		return
@@ -13412,16 +13412,16 @@ func testGetObjectContextV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13436,7 +13436,7 @@ func testGetObjectContextV2() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
@@ -13446,7 +13446,7 @@ func testGetObjectContextV2() {
 	args["ctx"] = ctx
 	cancel()
 
-	r, err := c.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+	r, err := c.GetObject(ctx, bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject failed unexpectedly", err)
 		return
@@ -13461,7 +13461,7 @@ func testGetObjectContextV2() {
 	defer cancel()
 
 	// Read the data back
-	r, err = c.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+	r, err = c.GetObject(ctx, bucketName, objectName, obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "GetObject shouldn't fail on longer timeout", err)
 		return
@@ -13499,16 +13499,16 @@ func testFGetObjectContextV2() {
 
 	c, err := NewClient(ClientConfig{CredsV2: true})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO v2 client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor v2 client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket call failed", err)
 		return
@@ -13523,7 +13523,7 @@ func testFGetObjectContextV2() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
@@ -13537,7 +13537,7 @@ func testFGetObjectContextV2() {
 	args["fileName"] = fileName
 
 	// Read the data back
-	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-f", minio.GetObjectOptions{})
+	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-f", obstor.GetObjectOptions{})
 	if err == nil {
 		logError(testName, function, args, startTime, "", "FGetObject should fail on short timeout", err)
 		return
@@ -13546,7 +13546,7 @@ func testFGetObjectContextV2() {
 	defer cancel()
 
 	// Read the data back
-	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-fcontext", minio.GetObjectOptions{})
+	err = c.FGetObject(ctx, bucketName, objectName, fileName+"-fcontext", obstor.GetObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "FGetObject call shouldn't fail on long timeout", err)
 		return
@@ -13574,16 +13574,16 @@ func testListObjects() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -13607,14 +13607,14 @@ func testListObjects() {
 		reader := getDataReader("datafile-33-kB")
 		defer reader.Close()
 		_, err = c.PutObject(context.Background(), bucketName, object.name, reader, int64(bufSize),
-			minio.PutObjectOptions{ContentType: "binary/octet-stream", StorageClass: object.storageClass})
+			obstor.PutObjectOptions{ContentType: "binary/octet-stream", StorageClass: object.storageClass})
 		if err != nil {
 			logError(testName, function, args, startTime, "", fmt.Sprintf("PutObject %d call failed", i+1), err)
 			return
 		}
 	}
 
-	testList := func(listFn func(context.Context, string, minio.ListObjectsOptions) <-chan minio.ObjectInfo, bucket string, opts minio.ListObjectsOptions) {
+	testList := func(listFn func(context.Context, string, obstor.ListObjectsOptions) <-chan obstor.ObjectInfo, bucket string, opts obstor.ListObjectsOptions) {
 		var objCursor int
 
 		// check for object name and storage-class from listing object result
@@ -13640,16 +13640,16 @@ func testListObjects() {
 		}
 	}
 
-	testList(c.ListObjects, bucketName, minio.ListObjectsOptions{Recursive: true, UseV1: true})
-	testList(c.ListObjects, bucketName, minio.ListObjectsOptions{Recursive: true})
-	testList(c.ListObjects, bucketName, minio.ListObjectsOptions{Recursive: true, WithMetadata: true})
+	testList(c.ListObjects, bucketName, obstor.ListObjectsOptions{Recursive: true, UseV1: true})
+	testList(c.ListObjects, bucketName, obstor.ListObjectsOptions{Recursive: true})
+	testList(c.ListObjects, bucketName, obstor.ListObjectsOptions{Recursive: true, WithMetadata: true})
 
 	logSuccess(testName, function, args, startTime)
 }
 
 // testCors is runnable against S3 itself.
-// Just provide the env var MINIO_GO_TEST_BUCKET_CORS with bucket that is public and WILL BE DELETED.
-// Recreate this manually each time. Minio-go SDK does not support calling
+// Just provide the env var OBSTOR_GO_TEST_BUCKET_CORS with bucket that is public and WILL BE DELETED.
+// Recreate this manually each time. Obstor-go SDK does not support calling
 // SetPublicBucket (put-public-access-block) on S3, otherwise we could script the whole thing.
 func testCors() {
 	ctx := context.Background()
@@ -13663,15 +13663,15 @@ func testCors() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Create or reuse a bucket that will get cors settings applied to it and deleted when done
-	bucketName := os.Getenv("MINIO_GO_TEST_BUCKET_CORS")
+	bucketName := os.Getenv("OBSTOR_GO_TEST_BUCKET_CORS")
 	if bucketName == "" {
-		bucketName = randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
-		err = c.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+		bucketName = randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
+		err = c.MakeBucket(ctx, bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 		if err != nil {
 			logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 			return
@@ -13695,7 +13695,7 @@ func testCors() {
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
-	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{ContentType: "binary/octet-stream"})
+	_, err = c.PutObject(ctx, bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{ContentType: "binary/octet-stream"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "PutObject call failed", err)
 		return
@@ -13792,7 +13792,7 @@ func testCors() {
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Max-Age":           "3600",
 				"Content-Length":                   "0",
-				// S3 additionally sets the following headers here, MinIO follows fetch spec and does not:
+				// S3 additionally sets the following headers here, Obstor follows fetch spec and does not:
 				// "Access-Control-Expose-Headers":    "",
 			},
 		},
@@ -13907,7 +13907,7 @@ func testCors() {
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Allow-Origin":      "http://www.example1.com",
 				"Access-Control-Expose-Headers":    "x-amz-server-side-encryption,x-amz-request-id",
-				// S3 additionally sets the following headers here, MinIO follows fetch spec and does not:
+				// S3 additionally sets the following headers here, Obstor follows fetch spec and does not:
 				// "Access-Control-Allow-Headers":     "x-another-header,x-could-be-anything",
 				// "Access-Control-Allow-Methods":     "PUT",
 				// "Access-Control-Max-Age":           "3600",
@@ -13926,7 +13926,7 @@ func testCors() {
 				"Access-Control-Allow-Credentials": "",
 				"Access-Control-Allow-Origin":      "*",
 				"Access-Control-Expose-Headers":    "x-amz-request-id,x-amz-server-side-encryption",
-				// S3 additionally sets the following headers here, MinIO follows fetch spec and does not:
+				// S3 additionally sets the following headers here, Obstor follows fetch spec and does not:
 				// "Access-Control-Allow-Headers":     "x-another-header,x-could-be-anything",
 				// "Access-Control-Allow-Methods":     "PUT",
 				// "Access-Control-Max-Age":           "3600",
@@ -13964,7 +13964,7 @@ func testCors() {
 				"Access-Control-Allow-Origin":      "*",
 				"Access-Control-Allow-Headers":     "",
 				"Access-Control-Expose-Headers":    "x-amz-request-id,X-AMZ-server-side-encryption",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Max-Age":           "3600",
 				// "Access-Control-Allow-Methods":     "GET",
 			},
@@ -14119,7 +14119,7 @@ func testCors() {
 				"Access-Control-Allow-Origin":      "http://www.example1.com",
 				"Access-Control-Allow-Headers":     "",
 				"Access-Control-Expose-Headers":    "x-amz-server-side-encryption,x-amz-request-id",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Max-Age":           "3600",
 				// "Access-Control-Allow-Methods":     "PUT",
 			},
@@ -14139,7 +14139,7 @@ func testCors() {
 				"Access-Control-Allow-Origin":      "http://www.example1.com",
 				"Access-Control-Allow-Headers":     "",
 				"Access-Control-Expose-Headers":    "x-amz-server-side-encryption,x-amz-request-id",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Max-Age":           "3600",
 				// "Access-Control-Allow-Methods":     "PUT",
 			},
@@ -14177,7 +14177,7 @@ func testCors() {
 				"Access-Control-Allow-Origin":      "http://www.example3.com",
 				"Access-Control-Allow-Headers":     "",
 				"Access-Control-Expose-Headers":    "",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Max-Age":           "10",
 				// "Access-Control-Allow-Methods":     "PUT",
 			},
@@ -14200,7 +14200,7 @@ func testCors() {
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Max-Age":           "3600",
 				"Content-Length":                   "0",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Expose-Headers":    "x-amz-server-side-encryption,x-amz-request-id",
 			},
 		},
@@ -14222,7 +14222,7 @@ func testCors() {
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Max-Age":           "3600",
 				"Content-Length":                   "0",
-				// S3 returns the following headers, MinIO follows fetch spec and does not:
+				// S3 returns the following headers, Obstor follows fetch spec and does not:
 				// "Access-Control-Expose-Headers":    "x-amz-server-side-encryption,x-amz-request-id",
 			},
 		},
@@ -14283,7 +14283,7 @@ func testCors() {
 				"Access-Control-Allow-Headers":     "x-abc-1",
 				"Access-Control-Expose-Headers":    "",
 				"Access-Control-Max-Age":           "",
-				// S3 returns POST, PUT, DELETE here, MinIO does not as spec does not require it.
+				// S3 returns POST, PUT, DELETE here, Obstor does not as spec does not require it.
 				// "Access-Control-Allow-Methods":     "DELETE",
 			},
 		},
@@ -14320,7 +14320,7 @@ func testCors() {
 				logError(testName, function, args, startTime, "", "HTTP request creation failed", err)
 				return
 			}
-			req.Header.Set("User-Agent", "MinIO-go-FunctionalTest/"+appVersion)
+			req.Header.Set("User-Agent", "Obstor-go-FunctionalTest/"+appVersion)
 
 			for k, v := range test.headers {
 				req.Header.Set(k, v)
@@ -14357,11 +14357,11 @@ func testCors() {
 			for k, v := range test.wantHeaders {
 				gotVal := resp.Header.Get(k)
 				if k == "Access-Control-Expose-Headers" {
-					// MinIO returns this in canonical form, S3 does not.
+					// Obstor returns this in canonical form, S3 does not.
 					gotVal = strings.ToLower(gotVal)
 					v = strings.ToLower(v)
 				}
-				// Remove all spaces, S3 adds spaces after CSV values in headers, MinIO does not.
+				// Remove all spaces, S3 adds spaces after CSV values in headers, Obstor does not.
 				gotVal = strings.ReplaceAll(gotVal, " ", "")
 				if gotVal != v {
 					errStr := fmt.Sprintf(" incorrect header in response, want: %s: '%s', got: '%s'", k, v, gotVal)
@@ -14387,16 +14387,16 @@ func testCorsSetGetDelete() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err = c.MakeBucket(ctx, bucketName, obstor.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -14475,18 +14475,18 @@ func testRemoveObjects() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -14496,7 +14496,7 @@ func testRemoveObjects() {
 	reader := getDataReader("datafile-129-MB")
 	defer reader.Close()
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Error uploading object", err)
 		return
@@ -14507,14 +14507,14 @@ func testRemoveObjects() {
 	reader = getDataReader("datafile-10-kB")
 	defer reader.Close()
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Error uploading object", err)
 	}
 
 	t := time.Date(2030, time.April, 25, 14, 0, 0, 0, time.UTC)
-	m := minio.RetentionMode(minio.Governance)
-	opts := minio.PutObjectRetentionOptions{
+	m := obstor.RetentionMode(obstor.Governance)
+	opts := obstor.PutObjectRetentionOptions{
 		GovernanceBypass: false,
 		RetainUntilDate:  &t,
 		Mode:             &m,
@@ -14525,12 +14525,12 @@ func testRemoveObjects() {
 		return
 	}
 
-	objectsCh := make(chan minio.ObjectInfo)
+	objectsCh := make(chan obstor.ObjectInfo)
 	// Send object names that are needed to be removed to objectsCh
 	go func() {
 		defer close(objectsCh)
 		// List all objects from a bucket-name with a matching prefix.
-		for object := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{UseV1: true, Recursive: true}) {
+		for object := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{UseV1: true, Recursive: true}) {
 			if object.Err != nil {
 				logError(testName, function, args, startTime, "", "Error listing objects", object.Err)
 				return
@@ -14539,7 +14539,7 @@ func testRemoveObjects() {
 		}
 	}()
 
-	for rErr := range c.RemoveObjects(context.Background(), bucketName, objectsCh, minio.RemoveObjectsOptions{}) {
+	for rErr := range c.RemoveObjects(context.Background(), bucketName, objectsCh, obstor.RemoveObjectsOptions{}) {
 		// Error is expected here because Retention is set on the object
 		// and RemoveObjects is called without Bypass Governance
 		if rErr.Err == nil {
@@ -14548,13 +14548,13 @@ func testRemoveObjects() {
 		}
 	}
 
-	objectsCh1 := make(chan minio.ObjectInfo)
+	objectsCh1 := make(chan obstor.ObjectInfo)
 
 	// Send object names that are needed to be removed to objectsCh
 	go func() {
 		defer close(objectsCh1)
 		// List all objects from a bucket-name with a matching prefix.
-		for object := range c.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{UseV1: true, Recursive: true}) {
+		for object := range c.ListObjects(context.Background(), bucketName, obstor.ListObjectsOptions{UseV1: true, Recursive: true}) {
 			if object.Err != nil {
 				logError(testName, function, args, startTime, "", "Error listing objects", object.Err)
 				return
@@ -14563,7 +14563,7 @@ func testRemoveObjects() {
 		}
 	}()
 
-	opts1 := minio.RemoveObjectsOptions{
+	opts1 := obstor.RemoveObjectsOptions{
 		GovernanceBypass: true,
 	}
 
@@ -14597,18 +14597,18 @@ func testRemoveObjectsIter() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 	objectName := randString(60, rand.NewSource(time.Now().UnixNano()), "")
 	args["objectName"] = objectName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
@@ -14618,7 +14618,7 @@ func testRemoveObjectsIter() {
 	reader := getDataReader("datafile-129-MB")
 	defer reader.Close()
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Error uploading object", err)
 		return
@@ -14629,14 +14629,14 @@ func testRemoveObjectsIter() {
 	reader = getDataReader("datafile-10-kB")
 	defer reader.Close()
 
-	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), minio.PutObjectOptions{})
+	_, err = c.PutObject(context.Background(), bucketName, objectName, reader, int64(bufSize), obstor.PutObjectOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Error uploading object", err)
 	}
 
 	t := time.Date(2030, time.April, 25, 14, 0, 0, 0, time.UTC)
-	m := minio.RetentionMode(minio.Governance)
-	opts := minio.PutObjectRetentionOptions{
+	m := obstor.RetentionMode(obstor.Governance)
+	opts := obstor.PutObjectRetentionOptions{
 		GovernanceBypass: false,
 		RetainUntilDate:  &t,
 		Mode:             &m,
@@ -14647,11 +14647,11 @@ func testRemoveObjectsIter() {
 		return
 	}
 
-	objectsIter := c.ListObjectsIter(context.Background(), bucketName, minio.ListObjectsOptions{
+	objectsIter := c.ListObjectsIter(context.Background(), bucketName, obstor.ListObjectsOptions{
 		WithVersions: true,
 		Recursive:    true,
 	})
-	results, err := c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter, minio.RemoveObjectsOptions{})
+	results, err := c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter, obstor.RemoveObjectsOptions{})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "Error sending delete request", err)
 		return
@@ -14666,8 +14666,8 @@ func testRemoveObjectsIter() {
 		return
 	}
 
-	objectsIter = c.ListObjectsIter(context.Background(), bucketName, minio.ListObjectsOptions{UseV1: true, Recursive: true})
-	results, err = c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter, minio.RemoveObjectsOptions{
+	objectsIter = c.ListObjectsIter(context.Background(), bucketName, obstor.ListObjectsOptions{UseV1: true, Recursive: true})
+	results, err = c.RemoveObjectsWithIter(context.Background(), bucketName, objectsIter, obstor.RemoveObjectsOptions{
 		GovernanceBypass: true,
 	})
 	if err != nil {
@@ -14704,23 +14704,23 @@ func testGetBucketTagging() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
 
 	_, err = c.GetBucketTagging(context.Background(), bucketName)
-	if minio.ToErrorResponse(err).Code != minio.NoSuchTagSet {
+	if obstor.ToErrorResponse(err).Code != obstor.NoSuchTagSet {
 		logError(testName, function, args, startTime, "", "Invalid error from server failed", err)
 		return
 	}
@@ -14746,23 +14746,23 @@ func testSetBucketTagging() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
 
 	_, err = c.GetBucketTagging(context.Background(), bucketName)
-	if minio.ToErrorResponse(err).Code != minio.NoSuchTagSet {
+	if obstor.ToErrorResponse(err).Code != obstor.NoSuchTagSet {
 		logError(testName, function, args, startTime, "", "Invalid error from server", err)
 		return
 	}
@@ -14818,23 +14818,23 @@ func testRemoveBucketTagging() {
 
 	c, err := NewClient(ClientConfig{})
 	if err != nil {
-		logError(testName, function, args, startTime, "", "MinIO client v4 object creation failed", err)
+		logError(testName, function, args, startTime, "", "Obstor client v4 object creation failed", err)
 		return
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test-")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test-")
 	args["bucketName"] = bucketName
 
 	// Make a new bucket.
-	err = c.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
+	err = c.MakeBucket(context.Background(), bucketName, obstor.MakeBucketOptions{Region: "us-east-1", ObjectLocking: true})
 	if err != nil {
 		logError(testName, function, args, startTime, "", "MakeBucket failed", err)
 		return
 	}
 
 	_, err = c.GetBucketTagging(context.Background(), bucketName)
-	if minio.ToErrorResponse(err).Code != minio.NoSuchTagSet {
+	if obstor.ToErrorResponse(err).Code != obstor.NoSuchTagSet {
 		logError(testName, function, args, startTime, "", "Invalid error from server", err)
 		return
 	}
@@ -14875,7 +14875,7 @@ func testRemoveBucketTagging() {
 	}
 
 	_, err = c.GetBucketTagging(context.Background(), bucketName)
-	if minio.ToErrorResponse(err).Code != minio.NoSuchTagSet {
+	if obstor.ToErrorResponse(err).Code != obstor.NoSuchTagSet {
 		logError(testName, function, args, startTime, "", "Invalid error from server", err)
 		return
 	}
@@ -14899,24 +14899,24 @@ func mustParseBool(str string) bool {
 }
 
 // wantChecksums is a map of expected checksums for an object.
-type wantChecksums map[minio.ChecksumType]string
+type wantChecksums map[obstor.ChecksumType]string
 
 // cmpChecksum compares the checksums of an object against expected values.
-func cmpChecksum(oi minio.ObjectInfo, chksums wantChecksums) error {
-	if oi.ChecksumCRC64NVME != chksums[minio.ChecksumCRC64NVME] {
-		return fmt.Errorf("Checksum mismatch for CRC64NVME, want: %s, got: %s", chksums[minio.ChecksumCRC64NVME], oi.ChecksumCRC64NVME)
+func cmpChecksum(oi obstor.ObjectInfo, chksums wantChecksums) error {
+	if oi.ChecksumCRC64NVME != chksums[obstor.ChecksumCRC64NVME] {
+		return fmt.Errorf("Checksum mismatch for CRC64NVME, want: %s, got: %s", chksums[obstor.ChecksumCRC64NVME], oi.ChecksumCRC64NVME)
 	}
-	if oi.ChecksumCRC32C != chksums[minio.ChecksumCRC32C] {
-		return fmt.Errorf("Checksum mismatch for CRC32C, want: %s, got: %s", chksums[minio.ChecksumCRC32C], oi.ChecksumCRC32C)
+	if oi.ChecksumCRC32C != chksums[obstor.ChecksumCRC32C] {
+		return fmt.Errorf("Checksum mismatch for CRC32C, want: %s, got: %s", chksums[obstor.ChecksumCRC32C], oi.ChecksumCRC32C)
 	}
-	if oi.ChecksumCRC32 != chksums[minio.ChecksumCRC32] {
-		return fmt.Errorf("Checksum mismatch for CRC32, want: %s, got: %s", chksums[minio.ChecksumCRC32], oi.ChecksumCRC32)
+	if oi.ChecksumCRC32 != chksums[obstor.ChecksumCRC32] {
+		return fmt.Errorf("Checksum mismatch for CRC32, want: %s, got: %s", chksums[obstor.ChecksumCRC32], oi.ChecksumCRC32)
 	}
-	if oi.ChecksumSHA1 != chksums[minio.ChecksumSHA1] {
-		return fmt.Errorf("Checksum mismatch for SHA1, want: %s, got: %s", chksums[minio.ChecksumSHA1], oi.ChecksumSHA1)
+	if oi.ChecksumSHA1 != chksums[obstor.ChecksumSHA1] {
+		return fmt.Errorf("Checksum mismatch for SHA1, want: %s, got: %s", chksums[obstor.ChecksumSHA1], oi.ChecksumSHA1)
 	}
-	if oi.ChecksumSHA256 != chksums[minio.ChecksumSHA256] {
-		return fmt.Errorf("Checksum mismatch for SHA256, want: %s, got: %s", chksums[minio.ChecksumSHA256], oi.ChecksumSHA256)
+	if oi.ChecksumSHA256 != chksums[obstor.ChecksumSHA256] {
+		return fmt.Errorf("Checksum mismatch for SHA256, want: %s, got: %s", chksums[obstor.ChecksumSHA256], oi.ChecksumSHA256)
 	}
 	return nil
 }

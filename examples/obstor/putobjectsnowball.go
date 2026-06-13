@@ -29,8 +29,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -39,8 +39,8 @@ func main() {
 		// please replace them with values for your setup.
 		YOURACCESSKEYID     = "Q3AM3UQ867SPQQA43P2F"
 		YOURSECRETACCESSKEY = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
-		YOURENDPOINT        = "play.min.io"
-		YOURBUCKET          = "mybucket" // 'mc mb play/mybucket' if it does not exist.
+		YOURENDPOINT        = "demo.obstor.net"
+		YOURBUCKET          = "mybucket" // 'mc mb demo/mybucket' if it does not exist.
 	)
 
 	// Requests are always secure (HTTPS) by default. Set secure=false to enable insecure (HTTP) access.
@@ -48,21 +48,21 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	minioClient, err := minio.New(YOURENDPOINT, &minio.Options{
+	obstorClient, err := obstor.New(YOURENDPOINT, &obstor.Options{
 		Creds:  credentials.NewStaticV4(YOURACCESSKEYID, YOURSECRETACCESSKEY, ""),
 		Secure: true,
 	})
 	if err != nil {
 		log.Fatalln(err)
 	}
-	minioClient.TraceOn(os.Stdout)
+	obstorClient.TraceOn(os.Stdout)
 
-	input := make(chan minio.SnowballObject, 1)
-	opts := minio.SnowballOptions{
-		Opts: minio.PutObjectOptions{},
+	input := make(chan obstor.SnowballObject, 1)
+	opts := obstor.SnowballOptions{
+		Opts: obstor.PutObjectOptions{},
 		// Keep in memory. We use this since we have small total payload.
 		InMemory: true,
-		// Compress data when uploading to a MinIO host.
+		// Compress data when uploading to a Obstor host.
 		Compress: true,
 	}
 
@@ -82,7 +82,7 @@ func main() {
 			// With random size 0 -> 10000
 			size := rng.Intn(10000)
 			key := fmt.Sprintf("%s/%d-%d.bin", string(prefix), i, size)
-			input <- minio.SnowballObject{
+			input <- obstor.SnowballObject{
 				// Create path to store objects within the bucket.
 				Key:     key,
 				Size:    int64(size),
@@ -96,20 +96,20 @@ func main() {
 	}()
 
 	// Collect and upload all entries.
-	err = minioClient.PutObjectsSnowball(context.TODO(), YOURBUCKET, opts, input)
+	err = obstorClient.PutObjectsSnowball(context.TODO(), YOURBUCKET, opts, input)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// Objects successfully uploaded.
 
 	// List the content of the prefix:
-	lopts := minio.ListObjectsOptions{
+	lopts := obstor.ListObjectsOptions{
 		Recursive: true,
 		Prefix:    string(prefix) + "/",
 	}
 
 	// List all objects from a bucket-name with a matching prefix.
-	for object := range minioClient.ListObjects(context.Background(), YOURBUCKET, lopts) {
+	for object := range obstorClient.ListObjects(context.Background(), YOURBUCKET, lopts) {
 		if object.Err != nil {
 			log.Fatalln(object.Err)
 		}

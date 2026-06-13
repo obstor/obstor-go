@@ -21,7 +21,7 @@ import "encoding/xml"
 
 // ApplySSEByDefault defines default encryption configuration, KMS or SSE. To activate
 // KMS, SSEAlgoritm needs to be set to "aws:kms"
-// Minio currently does not support Kms.
+// Obstor currently does not support Kms.
 type ApplySSEByDefault struct {
 	KmsMasterKeyID string `xml:"KMSMasterKeyID,omitempty"`
 	SSEAlgorithm   string `xml:"SSEAlgorithm"`

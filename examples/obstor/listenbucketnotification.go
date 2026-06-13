@@ -24,8 +24,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	minioClient, err := minio.New("play.min.io", &minio.Options{
+	obstorClient, err := obstor.New("demo.obstor.net", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -48,7 +48,7 @@ func main() {
 	// s3Client.TraceOn(os.Stderr)
 
 	// Listen for bucket notifications on "mybucket" filtered by prefix, suffix and events.
-	for notificationInfo := range minioClient.ListenBucketNotification(context.Background(), "YOUR-BUCKET", "PREFIX", "SUFFIX", []string{
+	for notificationInfo := range obstorClient.ListenBucketNotification(context.Background(), "YOUR-BUCKET", "PREFIX", "SUFFIX", []string{
 		"s3:ObjectCreated:*",
 		"s3:ObjectAccessed:*",
 		"s3:ObjectRemoved:*",

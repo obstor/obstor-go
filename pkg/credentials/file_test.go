@@ -147,10 +147,10 @@ func TestFileAWS(t *testing.T) {
 	}
 }
 
-func TestFileMinioClient(t *testing.T) {
+func TestFileObstorClient(t *testing.T) {
 	os.Clearenv()
 
-	creds := NewFileMinioClient("config.json.sample", "")
+	creds := NewFileObstorClient("config.json.sample", "")
 	credValues, err := creds.GetWithContext(defaultCredContext)
 	if err != nil {
 		t.Fatal(err)
@@ -167,9 +167,9 @@ func TestFileMinioClient(t *testing.T) {
 	}
 
 	os.Clearenv()
-	t.Setenv("MINIO_ALIAS", "play")
+	t.Setenv("OBSTOR_ALIAS", "demo")
 
-	creds = NewFileMinioClient("config.json.sample", "")
+	creds = NewFileObstorClient("config.json.sample", "")
 	credValues, err = creds.GetWithContext(defaultCredContext)
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ func TestFileMinioClient(t *testing.T) {
 
 	os.Clearenv()
 
-	creds = NewFileMinioClient("config.json.sample", "play")
+	creds = NewFileObstorClient("config.json.sample", "demo")
 	credValues, err = creds.GetWithContext(defaultCredContext)
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func TestFileMinioClient(t *testing.T) {
 		t.Errorf("Expected 'S3v2', got %s'", credValues.SignerType)
 	}
 
-	creds = NewFileMinioClient("non-existent.json", "play")
+	creds = NewFileObstorClient("non-existent.json", "demo")
 	_, err = creds.GetWithContext(defaultCredContext)
 	if !os.IsNotExist(err) {
 		t.Errorf("Expected open non-existent.json: no such file or directory, got %s", err)

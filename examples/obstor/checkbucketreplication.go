@@ -3,7 +3,7 @@
 
 /*
  * MinIO Go Library for Amazon S3 Compatible Cloud Storage
- * Copyright 2021 MinIO, Inc.
+ * Copyright 2020 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -39,20 +37,18 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("play.min.io", &minio.Options{
+	s3Client, err := obstor.New("demo.obstor.net", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	s3Client.TraceOn(os.Stderr)
-
-	// Get replication metrics for a bucket
-	m, err := s3Client.GetBucketReplicationMetrics(context.Background(), "bucket")
+	// s3Client.TraceOn(os.Stderr)
+	// Get bucket replication configuration from S3
+	err = s3Client.CheckBucketReplication(context.Background(), "bucket")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println("Replication metrics for my-bucketname:", m)
+	log.Println("Bucket replication configuration is valid")
 }

@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/minio/minio-go/v7/pkg/set"
+	"github.com/obstor/obstor-go/v7/pkg/set"
 )
 
 // BucketPolicy - Bucket level policy.
@@ -111,7 +111,7 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-// Statement - minio policy statement
+// Statement - obstor policy statement
 type Statement struct {
 	Actions    set.StringSet `json:"Action"`
 	Conditions ConditionMap  `json:"Condition,omitempty"`
@@ -121,7 +121,7 @@ type Statement struct {
 	Sid        string
 }
 
-// BucketAccessPolicy - minio policy collection
+// BucketAccessPolicy - obstor policy collection
 type BucketAccessPolicy struct {
 	Version    string      // date in YYYY-MM-DD format
 	Statements []Statement `json:"Statement"`

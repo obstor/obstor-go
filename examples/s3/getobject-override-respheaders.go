@@ -26,8 +26,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -53,7 +53,7 @@ func main() {
 	// response-content-language=ResponseContentLanguage
 	// response-content-type=ResponseContentType
 	// response-expires=ResponseExpires
-	opt := minio.GetObjectOptions{}
+	opt := obstor.GetObjectOptions{}
 	opt.SetReqParam("response-content-disposition", `attachment; filename="testing.txt"`)
 	opt.SetReqParam("response-cache-control", "No-cache")
 	opt.SetReqParam("response-content-encoding", "x-gzip")

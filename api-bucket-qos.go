@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 	"go.yaml.in/yaml/v3"
 )
 

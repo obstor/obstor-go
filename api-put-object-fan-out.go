@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 // PutObjectFanOutEntry is per object entry fan-out metadata
@@ -129,7 +129,7 @@ func (c *Client) PutObjectFanOut(ctx context.Context, bucket string, fanOutData 
 			}
 		}
 
-		if err := mwriter.WriteField("x-minio-fanout-list", b.String()); err != nil {
+		if err := mwriter.WriteField("x-obstor-fanout-list", b.String()); err != nil {
 			return
 		}
 

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"encoding/base64"
@@ -95,11 +95,11 @@ type Version struct {
 	VersionID    string `xml:"VersionId"`
 
 	// x-amz-meta-* headers stripped "x-amz-meta-" prefix containing the first value.
-	// Only returned by MinIO servers.
+	// Only returned by Obstor servers.
 	UserMetadata StringMap `json:"userMetadata,omitempty"`
 
 	// x-amz-tagging values in their k/v values.
-	// Only returned by MinIO servers.
+	// Only returned by Obstor servers.
 	UserTags URLMap `json:"userTags,omitempty" xml:"UserTags"`
 
 	Internal *struct {
@@ -107,7 +107,7 @@ type Version struct {
 		M int // Parity blocks
 	} `xml:"Internal"`
 
-	// Checksum values. Only returned by AiStor servers.
+	// Checksum values. Only returned by Obstor servers.
 	ChecksumCRC32     string `xml:",omitempty"`
 	ChecksumCRC32C    string `xml:",omitempty"`
 	ChecksumSHA1      string `xml:",omitempty"`

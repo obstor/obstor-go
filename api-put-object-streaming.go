@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // putObjectMultipartStream - upload a large object using
@@ -39,7 +39,7 @@ import (
 //
 // Following code handles these types of readers.
 //
-//   - *minio.Object
+//   - *obstor.Object
 //   - Any reader which has a method 'ReadAt()'
 func (c *Client) putObjectMultipartStream(ctx context.Context, bucketName, objectName string,
 	reader io.Reader, size int64, opts PutObjectOptions,
@@ -47,7 +47,7 @@ func (c *Client) putObjectMultipartStream(ctx context.Context, bucketName, objec
 	if opts.ConcurrentStreamParts && opts.NumThreads > 1 {
 		info, err = c.putObjectMultipartStreamParallel(ctx, bucketName, objectName, reader, opts)
 	} else if !isObject(reader) && isReadAt(reader) && !opts.SendContentMd5 {
-		// Verify if the reader implements ReadAt and it is not a *minio.Object then we will use parallel uploader.
+		// Verify if the reader implements ReadAt and it is not a *obstor.Object then we will use parallel uploader.
 		info, err = c.putObjectMultipartStreamFromReadAt(ctx, bucketName, objectName, reader.(io.ReaderAt), size, opts)
 	} else {
 		info, err = c.putObjectMultipartStreamOptionalChecksum(ctx, bucketName, objectName, reader, size, opts)

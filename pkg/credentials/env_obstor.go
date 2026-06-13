@@ -19,35 +19,35 @@ package credentials
 
 import "os"
 
-// A EnvMinio retrieves credentials from the environment variables of the
-// running process. EnvMinioironment credentials never expire.
+// A EnvObstor retrieves credentials from the environment variables of the
+// running process. Environment credentials never expire.
 //
 // Environment variables used:
 //
-// * Access Key ID:     MINIO_ACCESS_KEY.
-// * Secret Access Key: MINIO_SECRET_KEY.
-// * Access Key ID:     MINIO_ROOT_USER.
-// * Secret Access Key: MINIO_ROOT_PASSWORD.
-type EnvMinio struct {
+// * Access Key ID:     OBSTOR_ACCESS_KEY.
+// * Secret Access Key: OBSTOR_SECRET_KEY.
+// * Access Key ID:     OBSTOR_ROOT_USER.
+// * Secret Access Key: OBSTOR_ROOT_PASSWORD.
+type EnvObstor struct {
 	retrieved bool
 }
 
-// NewEnvMinio returns a pointer to a new Credentials object
+// NewEnvObstor returns a pointer to a new Credentials object
 // wrapping the environment variable provider.
-func NewEnvMinio() *Credentials {
-	return New(&EnvMinio{})
+func NewEnvObstor() *Credentials {
+	return New(&EnvObstor{})
 }
 
-func (e *EnvMinio) retrieve() (Value, error) {
+func (e *EnvObstor) retrieve() (Value, error) {
 	e.retrieved = false
 
-	id := os.Getenv("MINIO_ROOT_USER")
-	secret := os.Getenv("MINIO_ROOT_PASSWORD")
+	id := os.Getenv("OBSTOR_ROOT_USER")
+	secret := os.Getenv("OBSTOR_ROOT_PASSWORD")
 
 	signerType := SignatureV4
 	if id == "" || secret == "" {
-		id = os.Getenv("MINIO_ACCESS_KEY")
-		secret = os.Getenv("MINIO_SECRET_KEY")
+		id = os.Getenv("OBSTOR_ACCESS_KEY")
+		secret = os.Getenv("OBSTOR_SECRET_KEY")
 		if id == "" || secret == "" {
 			signerType = SignatureAnonymous
 		}
@@ -62,16 +62,16 @@ func (e *EnvMinio) retrieve() (Value, error) {
 }
 
 // Retrieve retrieves the keys from the environment.
-func (e *EnvMinio) Retrieve() (Value, error) {
+func (e *EnvObstor) Retrieve() (Value, error) {
 	return e.retrieve()
 }
 
 // RetrieveWithCredContext is like Retrieve() (no-op input cred context)
-func (e *EnvMinio) RetrieveWithCredContext(_ *CredContext) (Value, error) {
+func (e *EnvObstor) RetrieveWithCredContext(_ *CredContext) (Value, error) {
 	return e.retrieve()
 }
 
 // IsExpired returns if the credentials have been retrieved.
-func (e *EnvMinio) IsExpired() bool {
+func (e *EnvObstor) IsExpired() bool {
 	return !e.retrieved
 }

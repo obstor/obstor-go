@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/tags"
 )
 
 // PutObjectTaggingOptions holds an object version id
@@ -35,7 +35,7 @@ type PutObjectTaggingOptions struct {
 	Internal  AdvancedObjectTaggingOptions
 }
 
-// AdvancedObjectTaggingOptions for internal use by MinIO server - not intended for client use.
+// AdvancedObjectTaggingOptions for internal use by Obstor server - not intended for client use.
 type AdvancedObjectTaggingOptions struct {
 	ReplicationProxyRequest string
 }
@@ -67,7 +67,7 @@ func (c *Client) PutObjectTagging(ctx context.Context, bucketName, objectName st
 	}
 	headers := make(http.Header, 0)
 	if opts.Internal.ReplicationProxyRequest != "" {
-		headers.Set(minIOBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
+		headers.Set(obstorBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
 	}
 	reqBytes, err := xml.Marshal(otags)
 	if err != nil {
@@ -126,7 +126,7 @@ func (c *Client) GetObjectTagging(ctx context.Context, bucketName, objectName st
 	}
 	headers := make(http.Header, 0)
 	if opts.Internal.ReplicationProxyRequest != "" {
-		headers.Set(minIOBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
+		headers.Set(obstorBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
 	}
 	// Execute GET on object to get object tag(s)
 	resp, err := c.executeMethod(ctx, http.MethodGet, requestMetadata{
@@ -177,7 +177,7 @@ func (c *Client) RemoveObjectTagging(ctx context.Context, bucketName, objectName
 	}
 	headers := make(http.Header, 0)
 	if opts.Internal.ReplicationProxyRequest != "" {
-		headers.Set(minIOBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
+		headers.Set(obstorBucketReplicationProxyRequest, opts.Internal.ReplicationProxyRequest)
 	}
 	// Execute DELETE on object to remove object tag(s)
 	resp, err := c.executeMethod(ctx, http.MethodDelete, requestMetadata{

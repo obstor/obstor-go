@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // AppendObjectOptions https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-append.html

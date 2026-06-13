@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"encoding/xml"
@@ -185,11 +185,11 @@ type ObjectInfo struct {
 	Metadata http.Header `json:"metadata" xml:"-"`
 
 	// x-amz-meta-* headers stripped "x-amz-meta-" prefix containing the first value.
-	// Only returned by MinIO servers.
+	// Only returned by Obstor servers.
 	UserMetadata StringMap `json:"userMetadata,omitempty"`
 
 	// x-amz-tagging values in their k/v values.
-	// Only returned by MinIO servers.
+	// Only returned by Obstor servers.
 	UserTags URLMap `json:"userTags,omitempty" xml:"UserTags"`
 
 	// x-amz-tagging-count value

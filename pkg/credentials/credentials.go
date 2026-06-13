@@ -82,7 +82,7 @@ type CredContext struct {
 	// request is to be made to fetch the credentials.
 	Client *http.Client
 
-	// Endpoint specifies the MinIO endpoint that will be used if no
+	// Endpoint specifies the Obstor endpoint that will be used if no
 	// explicit endpoint is provided.
 	Endpoint string
 }

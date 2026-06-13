@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // ListBuckets list all buckets owned by this authenticated user.
@@ -754,7 +754,7 @@ func (o *ListObjectsOptions) Set(key, value string) {
 // ListObjects returns objects list after evaluating the passed options.
 //
 //	api := client.New(....)
-//	for object := range api.ListObjects(ctx, "mytestbucket", minio.ListObjectsOptions{Prefix: "starthere", Recursive:true}) {
+//	for object := range api.ListObjects(ctx, "mytestbucket", obstor.ListObjectsOptions{Prefix: "starthere", Recursive:true}) {
 //	    fmt.Println(object)
 //	}
 //
@@ -802,7 +802,7 @@ func (c *Client) ListObjects(ctx context.Context, bucketName string, opts ListOb
 // automatically stop.
 //
 //	api := client.New(....)
-//	for object := range api.ListObjectsIter(ctx, "mytestbucket", minio.ListObjectsOptions{Prefix: "starthere", Recursive:true}) {
+//	for object := range api.ListObjectsIter(ctx, "mytestbucket", obstor.ListObjectsOptions{Prefix: "starthere", Recursive:true}) {
 //	    if object.Err != nil {
 //	        // handle the errors.
 //	    }

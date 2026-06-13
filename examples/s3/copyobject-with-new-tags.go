@@ -25,8 +25,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -50,7 +50,7 @@ func main() {
 	// s3Client.TraceOn(os.Stderr)
 
 	// Source object
-	src := minio.CopySrcOptions{
+	src := obstor.CopySrcOptions{
 		Bucket: "my-sourcebucketname",
 		Object: "my-sourceobjectname",
 		// All following conditions are allowed and can be combined together.
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	// Destination object
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket:      "my-bucketname",
 		Object:      "my-objectname",
 		ReplaceTags: true,

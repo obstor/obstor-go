@@ -226,14 +226,14 @@ func TestLifecycleJSONRoundtrip(t *testing.T) {
 			{
 				Transition: Transition{
 					Days:         ExpirationDays(3),
-					StorageClass: "MINIOTIER-1",
+					StorageClass: "OBSTORTIER-1",
 				},
 				Expiration: Expiration{
 					DeleteMarker: ExpireDeleteMarker(true),
 				},
 				NoncurrentVersionTransition: NoncurrentVersionTransition{
 					NoncurrentDays: ExpirationDays(3),
-					StorageClass:   "MINIOTIER-2",
+					StorageClass:   "OBSTORTIER-2",
 				},
 				ID:     "rule-3",
 				Status: "Enabled",
@@ -241,7 +241,7 @@ func TestLifecycleJSONRoundtrip(t *testing.T) {
 			{
 				Transition: Transition{
 					Date:         ExpirationDate{testNow},
-					StorageClass: "MINIOTIER-1",
+					StorageClass: "OBSTORTIER-1",
 				},
 				ID:     "rule-4",
 				Status: "Enabled",
@@ -254,7 +254,7 @@ func TestLifecycleJSONRoundtrip(t *testing.T) {
 				NoncurrentVersionTransition: NoncurrentVersionTransition{
 					NoncurrentDays:          ExpirationDays(3),
 					NewerNoncurrentVersions: 1,
-					StorageClass:            "MINIOTIER-2",
+					StorageClass:            "OBSTORTIER-2",
 				},
 				ID:     "rule-5",
 				Status: "Enabled",

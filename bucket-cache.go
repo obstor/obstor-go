@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -24,9 +24,9 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/signer"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/signer"
 )
 
 // GetBucketLocation - get location for the bucket name from location cache, if not

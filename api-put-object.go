@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -30,9 +30,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/tags"
 	"golang.org/x/net/http/httpguts"
 )
 
@@ -58,7 +58,7 @@ func (r ReplicationStatus) Empty() bool {
 }
 
 // AdvancedPutOptions for internal use - to be utilized by replication, ILM transition
-// implementation on MinIO server
+// implementation on Obstor server
 type AdvancedPutOptions struct {
 	SourceVersionID          string
 	SourceETag               string
@@ -113,7 +113,7 @@ type PutObjectOptions struct {
 	Internal              AdvancedPutOptions
 
 	// RDMABuffer, when non-nil and Options.EnableRDMA=true, selects the RDMA
-	// path via libminiocpp.so. Must reference RDMABufferSize contiguous bytes.
+	// path via libobstorcpp.so. Must reference RDMABufferSize contiguous bytes.
 	// When set, the reader / size args to PutObject are ignored.
 	RDMABuffer     unsafe.Pointer
 	RDMABufferSize int
@@ -121,8 +121,8 @@ type PutObjectOptions struct {
 	customHeaders http.Header
 }
 
-// SetMatchETag if etag matches while PUT MinIO returns an error
-// this is a MinIO specific extension to support optimistic locking
+// SetMatchETag if etag matches while PUT Obstor returns an error
+// this is a Obstor specific extension to support optimistic locking
 // semantics.
 func (opts *PutObjectOptions) SetMatchETag(etag string) {
 	if opts.customHeaders == nil {
@@ -135,8 +135,8 @@ func (opts *PutObjectOptions) SetMatchETag(etag string) {
 	}
 }
 
-// SetMatchETagExcept if etag does not match while PUT MinIO returns an
-// error this is a MinIO specific extension to support optimistic locking
+// SetMatchETagExcept if etag does not match while PUT Obstor returns an
+// error this is a Obstor specific extension to support optimistic locking
 // semantics.
 func (opts *PutObjectOptions) SetMatchETagExcept(etag string) {
 	if opts.customHeaders == nil {
@@ -216,25 +216,25 @@ func (opts PutObjectOptions) Header() (header http.Header) {
 		header.Set(amzBucketReplicationStatus, string(opts.Internal.ReplicationStatus))
 	}
 	if !opts.Internal.SourceMTime.IsZero() {
-		header.Set(minIOBucketSourceMTime, opts.Internal.SourceMTime.Format(time.RFC3339Nano))
+		header.Set(obstorBucketSourceMTime, opts.Internal.SourceMTime.Format(time.RFC3339Nano))
 	}
 	if opts.Internal.SourceETag != "" {
-		header.Set(minIOBucketSourceETag, opts.Internal.SourceETag)
+		header.Set(obstorBucketSourceETag, opts.Internal.SourceETag)
 	}
 	if opts.Internal.ReplicationRequest {
-		header.Set(minIOBucketReplicationRequest, "true")
+		header.Set(obstorBucketReplicationRequest, "true")
 	}
 	if opts.Internal.ReplicationValidityCheck {
-		header.Set(minIOBucketReplicationCheck, "true")
+		header.Set(obstorBucketReplicationCheck, "true")
 	}
 	if !opts.Internal.LegalholdTimestamp.IsZero() {
-		header.Set(minIOBucketReplicationObjectLegalHoldTimestamp, opts.Internal.LegalholdTimestamp.Format(time.RFC3339Nano))
+		header.Set(obstorBucketReplicationObjectLegalHoldTimestamp, opts.Internal.LegalholdTimestamp.Format(time.RFC3339Nano))
 	}
 	if !opts.Internal.RetentionTimestamp.IsZero() {
-		header.Set(minIOBucketReplicationObjectRetentionTimestamp, opts.Internal.RetentionTimestamp.Format(time.RFC3339Nano))
+		header.Set(obstorBucketReplicationObjectRetentionTimestamp, opts.Internal.RetentionTimestamp.Format(time.RFC3339Nano))
 	}
 	if !opts.Internal.TaggingTimestamp.IsZero() {
-		header.Set(minIOBucketReplicationTaggingTimestamp, opts.Internal.TaggingTimestamp.Format(time.RFC3339Nano))
+		header.Set(obstorBucketReplicationTaggingTimestamp, opts.Internal.TaggingTimestamp.Format(time.RFC3339Nano))
 	}
 
 	if len(opts.UserTags) != 0 {
@@ -244,7 +244,7 @@ func (opts PutObjectOptions) Header() (header http.Header) {
 	}
 
 	for k, v := range opts.UserMetadata {
-		if isAmzHeader(k) || isStandardHeader(k) || isStorageClassHeader(k) || isMinioHeader(k) {
+		if isAmzHeader(k) || isStandardHeader(k) || isStorageClassHeader(k) || isObstorHeader(k) {
 			header.Set(k, v)
 		} else {
 			header.Set("x-amz-meta-"+k, v)
@@ -262,7 +262,7 @@ func (opts PutObjectOptions) Header() (header http.Header) {
 // validate() checks if the UserMetadata map has standard headers or and raises an error if so.
 func (opts PutObjectOptions) validate(c *Client) (err error) {
 	for k, v := range opts.UserMetadata {
-		if !httpguts.ValidHeaderFieldName(k) || isStandardHeader(k) || isSSEHeader(k) || isStorageClassHeader(k) || isMinioHeader(k) {
+		if !httpguts.ValidHeaderFieldName(k) || isStandardHeader(k) || isSSEHeader(k) || isStorageClassHeader(k) || isObstorHeader(k) {
 			return errInvalidArgument(k + " unsupported user defined metadata name")
 		}
 		if !httpguts.ValidHeaderFieldValue(v) {

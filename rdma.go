@@ -8,13 +8,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package minio
+package obstor
 
-// #cgo CFLAGS: -DMINIO_CPP_RDMA
-// #cgo CXXFLAGS: --std=c++17 -DMINIO_CPP_RDMA
-// #cgo LDFLAGS: -lminiocpp
+// #cgo CFLAGS: -DOBSTOR_CPP_RDMA
+// #cgo CXXFLAGS: --std=c++17 -DOBSTOR_CPP_RDMA
+// #cgo LDFLAGS: -lobstorcpp
 // #include <stdlib.h>
-// #include <miniocpp/c_api.h>
+// #include <obstorcpp/c_api.h>
 import "C"
 
 import (
@@ -27,7 +27,7 @@ import (
 var ErrRDMANotConnected = errors.New("RDMA infrastructure not connected")
 
 type rdmaClientHandle struct {
-	cptr *C.miniocpp_client
+	cptr *C.obstorcpp_client
 }
 
 func newRDMAClient(c *Client) (*rdmaClientHandle, error) {
@@ -52,7 +52,7 @@ func newRDMAClient(c *Client) (*rdmaClientHandle, error) {
 		useHTTPS = 1
 	}
 
-	cptr := C.miniocpp_client_new(endpoint, region, accessKey, secretKey,
+	cptr := C.obstorcpp_client_new(endpoint, region, accessKey, secretKey,
 		sessionToken, useHTTPS)
 	if cptr == nil {
 		return nil, fmt.Errorf("RDMA: %s", lastRDMAError())
@@ -74,7 +74,7 @@ func (c *Client) putObjectRDMA(_ context.Context, bucketName, objectName string,
 	defer C.free(unsafe.Pointer(objectC))
 
 	var etagBuf, checksumBuf [64]C.char
-	n := C.miniocpp_put_object(h.cptr, bucketC, objectC,
+	n := C.obstorcpp_put_object(h.cptr, bucketC, objectC,
 		opts.RDMABuffer, C.size_t(opts.RDMABufferSize),
 		nil, nil, &etagBuf[0], &checksumBuf[0])
 	if n < 0 {
@@ -103,7 +103,7 @@ func (c *Client) getObjectRDMA(_ context.Context, bucketName, objectName string,
 	objectC := C.CString(objectName)
 	defer C.free(unsafe.Pointer(objectC))
 
-	n := C.miniocpp_get_object(h.cptr, bucketC, objectC,
+	n := C.obstorcpp_get_object(h.cptr, bucketC, objectC,
 		opts.RDMABuffer, C.size_t(opts.RDMABufferSize), nil, nil)
 	if n < 0 {
 		return 0, fmt.Errorf("RDMA get: %s", lastRDMAError())
@@ -119,7 +119,7 @@ func (c *Client) rdma() (*rdmaClientHandle, error) {
 }
 
 func lastRDMAError() string {
-	msg := C.miniocpp_last_error()
+	msg := C.obstorcpp_last_error()
 	if msg == nil {
 		return "unknown error"
 	}
@@ -130,11 +130,11 @@ func lastRDMAError() string {
 // PutObjectOptions.RDMABuffer / GetObjectOptions.RDMABuffer. Release with
 // FreeAlignedBuffer. Returns nil on allocation failure.
 func AlignedBuffer(n int) unsafe.Pointer {
-	return C.miniocpp_alloc_aligned(C.size_t(n))
+	return C.obstorcpp_alloc_aligned(C.size_t(n))
 }
 
 // FreeAlignedBuffer releases a buffer from AlignedBuffer.
-func FreeAlignedBuffer(p unsafe.Pointer) { C.miniocpp_free_aligned(p) }
+func FreeAlignedBuffer(p unsafe.Pointer) { C.obstorcpp_free_aligned(p) }
 
 // IsRDMAAvailable reports whether cuObj is connected to a cuObjServer.
-func IsRDMAAvailable() bool { return C.miniocpp_rdma_available() != 0 }
+func IsRDMAAvailable() bool { return C.obstorcpp_rdma_available() != 0 }

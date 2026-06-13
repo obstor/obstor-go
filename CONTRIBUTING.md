@@ -1,6 +1,6 @@
 ### Developer Guidelines
 
-`minio-go` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
+`obstor-go` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
 
 -	Go ahead and fork the project and make your changes. We encourage pull requests to discuss code changes.
 
@@ -19,5 +19,5 @@
 
 -	Read [Effective Go](https://github.com/golang/go/wiki/CodeReviewComments) article from Golang project
 
-	-	`minio-go` project is strictly conformant with Golang style
+	-	`obstor-go` project is strictly conformant with Golang style
 	-	if you happen to observe offending code, please feel free to send a pull request

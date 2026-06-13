@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // GetObject wrapper function that accepts a request context
@@ -41,7 +41,7 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string, o
 	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return nil, ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Code:       XMinioInvalidObjectName,
+			Code:       XObstorInvalidObjectName,
 			Message:    err.Error(),
 		}
 	}
@@ -658,7 +658,7 @@ func (o *Object) Close() (err error) {
 	return nil
 }
 
-// newObject instantiates a new *minio.Object*
+// newObject instantiates a new *obstor.Object*
 // ObjectInfo will be set by setObjectInfo
 func newObject(ctx context.Context, cancel context.CancelFunc, reqCh chan<- getRequest, resCh <-chan getResponse) *Object {
 	return &Object{
@@ -689,7 +689,7 @@ func (c *Client) getObject(ctx context.Context, bucketName, objectName string, o
 	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return nil, ObjectInfo{}, nil, ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Code:       XMinioInvalidObjectName,
+			Code:       XObstorInvalidObjectName,
 			Message:    err.Error(),
 		}
 	}

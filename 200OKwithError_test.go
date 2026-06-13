@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func Test200MultipartUploadWithSpaces(t *testing.T) {
@@ -47,7 +47,7 @@ func Test200MultipartUploadWithSpaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	core, err := NewCore(
 		srv.Host,
 		&Options{
@@ -108,7 +108,7 @@ func Test200MultipartUploadWithError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	core, err := NewCore(
 		srv.Host,
 		&Options{
@@ -169,7 +169,7 @@ func Test200DeleteObjectsWithError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	core, err := NewCore(
 		srv.Host,
 		&Options{

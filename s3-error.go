@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 // Constants for error keys
 const (
@@ -61,7 +61,7 @@ const (
 	BucketAlreadyOwnedByYou           = "BucketAlreadyOwnedByYou"
 	InvalidDuration                   = "InvalidDuration"
 	XAmzContentSHA256Mismatch         = "XAmzContentSHA256Mismatch"
-	XMinioInvalidObjectName           = "XMinioInvalidObjectName"
+	XObstorInvalidObjectName          = "XObstorInvalidObjectName"
 	NoSuchCORSConfiguration           = "NoSuchCORSConfiguration"
 	BucketAlreadyExists               = "BucketAlreadyExists"
 	NoSuchVersion                     = "NoSuchVersion"

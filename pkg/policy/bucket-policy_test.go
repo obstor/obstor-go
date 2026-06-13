@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/set"
+	"github.com/obstor/obstor-go/v7/pkg/set"
 )
 
 // TestUnmarshalBucketPolicy tests unmarsheling various examples
@@ -2123,31 +2123,31 @@ func TestBucketPolicyResourceMatch(t *testing.T) {
 	}{
 		// Test case 1-4.
 		// Policy with resource ending with bucket/* allows access to all objects inside the given bucket.
-		{generateResource("minio-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/*")), true},
-		{generateResource("minio-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/*")), true},
-		{generateResource("minio-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/*")), true},
-		{generateResource("minio-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/*")), true},
+		{generateResource("obstor-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/*")), true},
+		{generateResource("obstor-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/*")), true},
+		{generateResource("obstor-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/*")), true},
+		{generateResource("obstor-bucket", ""), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/*")), true},
 		// Test case - 5.
 		// Policy with resource ending with bucket/oo* should not allow access to bucket/output.txt.
-		{generateResource("minio-bucket", "output.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/oo*")), false},
+		{generateResource("obstor-bucket", "output.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/oo*")), false},
 		// Test case - 6.
 		// Policy with resource ending with bucket/oo* should allow access to bucket/ootput.txt.
-		{generateResource("minio-bucket", "ootput.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/oo*")), true},
+		{generateResource("obstor-bucket", "ootput.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/oo*")), true},
 		// Test case - 7.
 		// Policy with resource ending with bucket/oo* allows access to all subfolders starting with "oo" inside given bucket.
-		{generateResource("minio-bucket", "oop-bucket/my-file"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/oo*")), true},
+		{generateResource("obstor-bucket", "oop-bucket/my-file"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/oo*")), true},
 		// Test case - 8.
-		{generateResource("minio-bucket", "Asia/India/1.pjg"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/Asia/Japan/*")), false},
+		{generateResource("obstor-bucket", "Asia/India/1.pjg"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/Asia/Japan/*")), false},
 		// Test case - 9.
-		{generateResource("minio-bucket", "Asia/India/1.pjg"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "minio-bucket"+"/Asia/Japan/*")), false},
+		{generateResource("obstor-bucket", "Asia/India/1.pjg"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix, "obstor-bucket"+"/Asia/Japan/*")), false},
 		// Test case - 10.
 		// Proves that the name space is flat.
-		{generateResource("minio-bucket", "Africa/Bihar/India/design_info.doc/Bihar"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix,
-			"minio-bucket"+"/*/India/*/Bihar")), true},
+		{generateResource("obstor-bucket", "Africa/Bihar/India/design_info.doc/Bihar"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix,
+			"obstor-bucket"+"/*/India/*/Bihar")), true},
 		// Test case - 11.
 		// Proves that the name space is flat.
-		{generateResource("minio-bucket", "Asia/China/India/States/Bihar/output.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix,
-			"minio-bucket"+"/*/India/*/Bihar/*")), true},
+		{generateResource("obstor-bucket", "Asia/China/India/States/Bihar/output.txt"), generateStatement(fmt.Sprintf("%s%s", awsResourcePrefix,
+			"obstor-bucket"+"/*/India/*/Bihar/*")), true},
 	}
 	for i, testCase := range testCases {
 		resources := testCase.statement.Resources.FuncMatch(resourceMatch, testCase.resourceToMatch)

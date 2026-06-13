@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-// This example uses the minio-go client against AWS S3 on Outposts.
+// This example uses the obstor-go client against AWS S3 on Outposts.
 // It performs a PutObject and GetObject to verify the client works with
 // Outposts endpoints (s3-outposts signing and path-style requests).
 //
@@ -31,11 +31,11 @@
 //	AWS_ACCESS_KEY_ID     - Required if S3_OUTPOSTS_PROFILE is unset
 //	AWS_SECRET_ACCESS_KEY - Required if S3_OUTPOSTS_PROFILE is unset
 //
-// Run from repo root (uses local minio-go):
+// Run from repo root (uses local obstor-go):
 //
 //	go run -tags example ./examples/s3/s3-outposts-put-get.go
 //
-// Or from examples/s3 (replace in go.mod points to parent minio-go):
+// Or from examples/s3 (replace in go.mod points to parent obstor-go):
 //
 //	cd examples/s3 && go run -tags example s3-outposts-put-get.go
 package main
@@ -48,8 +48,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -77,7 +77,7 @@ func main() {
 		creds = credentials.NewStaticV4(accessKey, secretKey, "")
 	}
 
-	client, err := minio.New(endpoint, &minio.Options{
+	client, err := obstor.New(endpoint, &obstor.Options{
 		Creds:  creds,
 		Secure: true,
 		Region: region,
@@ -86,13 +86,13 @@ func main() {
 		log.Fatalf("New client: %v", err)
 	}
 
-	objectKey := "outposts-test/hello-minio-go.txt"
-	objectBody := "Hello from minio-go S3 on Outposts\n"
+	objectKey := "outposts-test/hello-obstor-go.txt"
+	objectBody := "Hello from obstor-go S3 on Outposts\n"
 
 	ctx := context.Background()
 
 	fmt.Println("PutObject...")
-	_, err = client.PutObject(ctx, bucket, objectKey, strings.NewReader(objectBody), int64(len(objectBody)), minio.PutObjectOptions{
+	_, err = client.PutObject(ctx, bucket, objectKey, strings.NewReader(objectBody), int64(len(objectBody)), obstor.PutObjectOptions{
 		ContentType: "text/plain",
 	})
 	if err != nil {
@@ -101,7 +101,7 @@ func main() {
 	fmt.Println("PutObject OK")
 
 	fmt.Println("GetObject...")
-	obj, err := client.GetObject(ctx, bucket, objectKey, minio.GetObjectOptions{})
+	obj, err := client.GetObject(ctx, bucket, objectKey, obstor.GetObjectOptions{})
 	if err != nil {
 		log.Fatalf("GetObject: %v", err)
 	}
@@ -113,5 +113,5 @@ func main() {
 	}
 	fmt.Println("GetObject OK")
 	fmt.Println("Content:", string(data))
-	fmt.Println("Done. MinIO client works with S3 on Outposts.")
+	fmt.Println("Done. Obstor client works with S3 on Outposts.")
 }

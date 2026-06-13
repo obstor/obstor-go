@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/set"
+	"github.com/obstor/obstor-go/v7/pkg/set"
 )
 
 // MaxRetry is the maximum number of retries before stopping.

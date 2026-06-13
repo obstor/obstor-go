@@ -1,12 +1,12 @@
 // Copyright 2024-2026 - MinIO, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// rdma-test exercises the unified minio-go RDMA path against a running
-// MinIO server. Requires -tags=rdma at build time and libminiocpp.so on
+// rdma-test exercises the unified obstor-go RDMA path against a running
+// Obstor server. Requires -tags=rdma at build time and libobstorcpp.so on
 // the host's library search path.
 //
 //   go build -tags=rdma -o rdma-test ./cmd/rdma-test
-//   MINIO_ENDPOINT=coe01:9000 MINIO_ACCESS_KEY=... MINIO_SECRET_KEY=... ./rdma-test
+//   OBSTOR_ENDPOINT=coe01:9000 OBSTOR_ACCESS_KEY=... OBSTOR_SECRET_KEY=... ./rdma-test
 
 package main
 
@@ -18,8 +18,8 @@ import (
 	"os"
 	"unsafe"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 const (
@@ -42,13 +42,13 @@ func main() {
 }
 
 func run() error {
-	endpoint := envOr("MINIO_ENDPOINT", "coe01:9000")
-	accessKey := envOr("MINIO_ACCESS_KEY", "minioadmin")
-	secretKey := envOr("MINIO_SECRET_KEY", "minioadmin")
+	endpoint := envOr("OBSTOR_ENDPOINT", "coe01:9000")
+	accessKey := envOr("OBSTOR_ACCESS_KEY", "obstoradmin")
+	secretKey := envOr("OBSTOR_SECRET_KEY", "obstoradmin")
 
-	fmt.Printf("endpoint=%s rdma_available=%v\n", endpoint, minio.IsRDMAAvailable())
+	fmt.Printf("endpoint=%s rdma_available=%v\n", endpoint, obstor.IsRDMAAvailable())
 
-	client, err := minio.New(endpoint, &minio.Options{
+	client, err := obstor.New(endpoint, &obstor.Options{
 		Creds:      credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure:     false,
 		EnableRDMA: true,
@@ -64,23 +64,23 @@ func run() error {
 		return fmt.Errorf("BucketExists: %w", err)
 	}
 	if !exists {
-		if err := client.MakeBucket(ctx, testBucket, minio.MakeBucketOptions{}); err != nil {
+		if err := client.MakeBucket(ctx, testBucket, obstor.MakeBucketOptions{}); err != nil {
 			return fmt.Errorf("MakeBucket: %w", err)
 		}
 	}
 
-	src := minio.AlignedBuffer(testSize)
+	src := obstor.AlignedBuffer(testSize)
 	if src == nil {
 		return fmt.Errorf("AlignedBuffer(%d) returned nil", testSize)
 	}
-	defer minio.FreeAlignedBuffer(src)
+	defer obstor.FreeAlignedBuffer(src)
 	srcSlice := unsafe.Slice((*byte)(src), testSize)
 	for i := range srcSlice {
 		srcSlice[i] = byte(i)
 	}
 
 	fmt.Print("PutObject (RDMA)... ")
-	info, err := client.PutObject(ctx, testBucket, testObject, nil, 0, minio.PutObjectOptions{
+	info, err := client.PutObject(ctx, testBucket, testObject, nil, 0, obstor.PutObjectOptions{
 		RDMABuffer:     src,
 		RDMABufferSize: testSize,
 	})
@@ -89,15 +89,15 @@ func run() error {
 	}
 	fmt.Printf("ok etag=%s size=%d checksum=%s\n", info.ETag, info.Size, info.ChecksumCRC64NVME)
 
-	dst := minio.AlignedBuffer(testSize)
+	dst := obstor.AlignedBuffer(testSize)
 	if dst == nil {
 		return fmt.Errorf("AlignedBuffer(%d) returned nil", testSize)
 	}
-	defer minio.FreeAlignedBuffer(dst)
+	defer obstor.FreeAlignedBuffer(dst)
 	dstSlice := unsafe.Slice((*byte)(dst), testSize)
 
 	fmt.Print("GetObject (RDMA)... ")
-	obj, err := client.GetObject(ctx, testBucket, testObject, minio.GetObjectOptions{
+	obj, err := client.GetObject(ctx, testBucket, testObject, obstor.GetObjectOptions{
 		RDMABuffer:     dst,
 		RDMABufferSize: testSize,
 	})

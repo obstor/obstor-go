@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"fmt"
@@ -25,10 +25,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
-// AdvancedGetOptions for internal use by MinIO server - not intended for client use.
+// AdvancedGetOptions for internal use by Obstor server - not intended for client use.
 type AdvancedGetOptions struct {
 	ReplicationDeleteMarker           bool
 	IsReplicationReadyForDeleteMarker bool
@@ -50,7 +50,7 @@ type GetObjectOptions struct {
 	Checksum bool
 
 	// RDMABuffer, when non-nil and Options.EnableRDMA=true, downloads directly
-	// into a contiguous buffer via libminiocpp.so. The returned *Object's
+	// into a contiguous buffer via libobstorcpp.so. The returned *Object's
 	// Read() returns EOF immediately; bytes-transferred is in Stat().Size.
 	RDMABuffer     unsafe.Pointer
 	RDMABufferSize int
@@ -75,7 +75,7 @@ func (o GetObjectOptions) Header() http.Header {
 	// this header is set for active-active replication scenario where GET/HEAD
 	// to site A is proxy'd to site B if object/version missing on site A.
 	if o.Internal.ReplicationProxyRequest != "" {
-		headers.Set(minIOBucketReplicationProxyRequest, o.Internal.ReplicationProxyRequest)
+		headers.Set(obstorBucketReplicationProxyRequest, o.Internal.ReplicationProxyRequest)
 	}
 	if o.Checksum {
 		headers.Set("x-amz-checksum-mode", "ENABLED")

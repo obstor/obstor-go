@@ -335,7 +335,7 @@ func TestSts(t *testing.T) {
 		Endpoint: server.URL,
 	}
 
-	f, err := os.CreateTemp(t.TempDir(), "minio-go")
+	f, err := os.CreateTemp(t.TempDir(), "obstor-go")
 	if err != nil {
 		t.Errorf("Unexpected failure %s", err)
 	}
@@ -375,7 +375,7 @@ func TestStsCn(t *testing.T) {
 		Endpoint: server.URL,
 	}
 
-	f, err := os.CreateTemp(t.TempDir(), "minio-go")
+	f, err := os.CreateTemp(t.TempDir(), "obstor-go")
 	if err != nil {
 		t.Errorf("Unexpected failure %s", err)
 	}

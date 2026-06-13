@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"archive/tar"
@@ -47,7 +47,7 @@ type SnowballOptions struct {
 
 	// Compress enabled content compression before upload.
 	// Compression will typically reduce memory and network usage,
-	// Compression can safely be enabled with MinIO hosts.
+	// Compression can safely be enabled with Obstor hosts.
 	Compress bool
 
 	// SkipErrs if enabled will skip any errors while reading the
@@ -192,10 +192,10 @@ objectLoop:
 
 			header.PAXRecords = make(map[string]string)
 			if obj.VersionID != "" {
-				header.PAXRecords["minio.versionId"] = obj.VersionID
+				header.PAXRecords["obstor.versionId"] = obj.VersionID
 			}
 			for k, vals := range obj.Headers {
-				header.PAXRecords["minio.metadata."+k] = strings.Join(vals, ",")
+				header.PAXRecords["obstor.metadata."+k] = strings.Join(vals, ",")
 			}
 
 			if err := t.WriteHeader(&header); err != nil {

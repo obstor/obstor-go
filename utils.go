@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -40,9 +40,9 @@ import (
 	"sync"
 	"time"
 
-	md5simd "github.com/minio/md5-simd"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/tags"
+	md5simd "github.com/obstor/md5-simd"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/tags"
 )
 
 func trimEtag(etag string) string {
@@ -216,7 +216,7 @@ func extractObjMetadata(header http.Header) http.Header {
 		"X-Amz-Server-Side-Encryption",
 		"X-Amz-Tagging-Count",
 		"X-Amz-Meta-",
-		"X-Minio-Meta-",
+		"X-Obstor-Meta-",
 		// Add new headers to be preserved.
 		// if you add new headers here, please extend
 		// PutObjectOptions{} to preserve them
@@ -230,7 +230,7 @@ func extractObjMetadata(header http.Header) http.Header {
 				continue
 			}
 			found = true
-			if prefix == "X-Amz-Meta-" || prefix == "X-Minio-Meta-" {
+			if prefix == "X-Amz-Meta-" || prefix == "X-Obstor-Meta-" {
 				for index, val := range v {
 					if strings.HasPrefix(val, "=?") {
 						decoder := mime.WordDecoder{}
@@ -309,13 +309,13 @@ func ToObjectInfo(bucketName, objectName string, h http.Header) (ObjectInfo, err
 			Region:     h.Get("x-amz-bucket-region"),
 		}
 	}
-	mtimeStr := h.Get("X-Minio-Source-Mtime")
+	mtimeStr := h.Get("X-Obstor-Source-Mtime")
 	if mtimeStr != "" {
 		mtime, err = time.Parse(time.RFC3339Nano, mtimeStr)
 		if err != nil {
 			return ObjectInfo{}, ErrorResponse{
 				Code:       InternalError,
-				Message:    fmt.Sprintf("X-Minio-Source-Mtime is not in supported format: %v", err),
+				Message:    fmt.Sprintf("X-Obstor-Source-Mtime is not in supported format: %v", err),
 				BucketName: bucketName,
 				Key:        objectName,
 				RequestID:  h.Get("x-amz-request-id"),
@@ -558,9 +558,9 @@ func isAmzHeader(headerKey string) bool {
 	return strings.HasPrefix(key, "x-amz-meta-") || strings.HasPrefix(key, "x-amz-grant-") || key == "x-amz-acl" || isSSEHeader(headerKey) || strings.HasPrefix(key, "x-amz-checksum-")
 }
 
-// isMinioHeader returns true if header is x-minio- header.
-func isMinioHeader(headerKey string) bool {
-	return strings.HasPrefix(strings.ToLower(headerKey), "x-minio-")
+// isObstorHeader returns true if header is x-obstor- header.
+func isObstorHeader(headerKey string) bool {
+	return strings.HasPrefix(strings.ToLower(headerKey), "x-obstor-")
 }
 
 // supportedQueryValues is a list of query strings that can be passed in when using GetObject.

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"crypto/md5"
@@ -34,7 +34,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/crc32"
-	"github.com/minio/crc64nvme"
+	"github.com/obstor/crc64nvme"
 	"github.com/zeebo/xxh3"
 )
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // ObjectAttributesOptions are options used for the GetObjectAttributes API
@@ -42,7 +42,7 @@ import (
 // the listing will start AFTER the part matching PartNumberMarker
 //
 // - ServerSideEncryption
-// The server-side encryption algorithm used when storing this object in Minio
+// The server-side encryption algorithm used when storing this object in Obstor
 type ObjectAttributesOptions struct {
 	MaxParts             int
 	VersionID            string

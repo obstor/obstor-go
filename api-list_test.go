@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"net/http"
@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func TestListObjectVersionsHonorsStartAfter(t *testing.T) {

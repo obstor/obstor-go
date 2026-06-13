@@ -24,8 +24,8 @@ import (
 	"context"
 	"log"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -48,9 +48,9 @@ func main() {
 	// s3Client.TraceOn(os.Stderr)
 
 	// Set object lock configuration.
-	mode := minio.Governance
+	mode := obstor.Governance
 	validity := uint(30)
-	unit := minio.Days
+	unit := obstor.Days
 
 	err = s3Client.SetObjectLockConfig(context.Background(), "my-bucketname", &mode, &validity, &unit)
 	if err != nil {

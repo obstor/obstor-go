@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ import (
 	"encoding/xml"
 	"net/http"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // Bucket operations
@@ -71,7 +71,7 @@ func (c *Client) doMakeBucket(ctx context.Context, bucketName string, opts MakeB
 		headers.Add("x-amz-bucket-object-lock-enabled", "true")
 	}
 	if opts.ForceCreate {
-		headers.Add("x-minio-force-create", "true")
+		headers.Add("x-obstor-force-create", "true")
 	}
 	reqMetadata.customHeader = headers
 
@@ -114,7 +114,7 @@ type MakeBucketOptions struct {
 	// Enable object locking
 	ObjectLocking bool
 
-	// ForceCreate - this is a MinIO specific extension.
+	// ForceCreate - this is a Obstor specific extension.
 	ForceCreate bool
 }
 

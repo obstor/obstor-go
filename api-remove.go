@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // useMultiDeleteForBulkDelete returns true if the client should use
@@ -46,7 +46,7 @@ type BucketOptions = RemoveBucketOptions
 //revive:enable
 
 // RemoveBucketOptions special headers to purge buckets, only
-// useful when endpoint is MinIO
+// useful when endpoint is Obstor
 type RemoveBucketOptions struct {
 	ForceDelete bool
 }
@@ -65,7 +65,7 @@ func (c *Client) RemoveBucketWithOptions(ctx context.Context, bucketName string,
 	// Build headers.
 	headers := make(http.Header)
 	if opts.ForceDelete {
-		headers.Set(minIOForceDelete, "true")
+		headers.Set(obstorForceDelete, "true")
 	}
 
 	// Execute DELETE on bucket.
@@ -167,22 +167,22 @@ func (c *Client) removeObject(ctx context.Context, bucketName, objectName string
 		headers.Set(amzBypassGovernance, "true")
 	}
 	if opts.Internal.ReplicationDeleteMarker {
-		headers.Set(minIOBucketReplicationDeleteMarker, "true")
+		headers.Set(obstorBucketReplicationDeleteMarker, "true")
 	}
 	if !opts.Internal.ReplicationMTime.IsZero() {
-		headers.Set(minIOBucketSourceMTime, opts.Internal.ReplicationMTime.Format(time.RFC3339Nano))
+		headers.Set(obstorBucketSourceMTime, opts.Internal.ReplicationMTime.Format(time.RFC3339Nano))
 	}
 	if !opts.Internal.ReplicationStatus.Empty() {
 		headers.Set(amzBucketReplicationStatus, string(opts.Internal.ReplicationStatus))
 	}
 	if opts.Internal.ReplicationRequest {
-		headers.Set(minIOBucketReplicationRequest, "true")
+		headers.Set(obstorBucketReplicationRequest, "true")
 	}
 	if opts.Internal.ReplicationValidityCheck {
-		headers.Set(minIOBucketReplicationCheck, "true")
+		headers.Set(obstorBucketReplicationCheck, "true")
 	}
 	if opts.ForceDelete {
-		headers.Set(minIOForceDelete, "true")
+		headers.Set(obstorForceDelete, "true")
 	}
 	// Execute DELETE on objectName.
 	resp, err := c.executeMethod(ctx, http.MethodDelete, requestMetadata{

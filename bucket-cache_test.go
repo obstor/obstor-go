@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -28,15 +28,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/kvcache"
-	"github.com/minio/minio-go/v7/pkg/signer"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/kvcache"
+	"github.com/obstor/obstor-go/v7/pkg/signer"
 )
 
 // Tests validate kvCache operations.
 func TestBucketLocationCacheOps(t *testing.T) {
 	testBucketLocationCache := &kvcache.Cache[string, string]{}
-	expectedBucketName := "minio-bucket"
+	expectedBucketName := "obstor-bucket"
 	expectedLocation := "us-east-1"
 	testBucketLocationCache.Set(expectedBucketName, expectedLocation)
 	actualLocation, ok := testBucketLocationCache.Get(expectedBucketName)
@@ -153,10 +153,10 @@ func TestGetBucketLocationRequest(t *testing.T) {
 		{"storage.googleapis.com", "my-access-key", "my-secret-key", false},
 		{"storage.googleapis.com", "", "my-secret-key", false},
 
-		// endpoint custom domain running MinIO server.
-		{"play.min.io", "", "", false},
-		{"play.min.io", "my-access-key", "my-secret-key", false},
-		{"play.min.io", "my-acess-key", "", false},
+		// endpoint custom domain running Obstor server.
+		{"demo.obstor.net", "", "", false},
+		{"demo.obstor.net", "my-access-key", "my-secret-key", false},
+		{"demo.obstor.net", "my-acess-key", "", false},
 	}
 	testCases := []struct {
 		bucketName string

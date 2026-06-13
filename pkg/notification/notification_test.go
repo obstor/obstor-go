@@ -129,7 +129,7 @@ func TestConfig_Equal(t *testing.T) {
 		{
 			name: "same order",
 			fields: fields{
-				Arn:    NewArn("minio", "sqs", "", "1", "postgresql"),
+				Arn:    NewArn("obstor", "sqs", "", "1", "postgresql"),
 				Events: []EventType{ObjectCreatedAll, ObjectAccessedAll},
 				Filter: &Filter{
 					S3Key: S3Key{
@@ -147,7 +147,7 @@ func TestConfig_Equal(t *testing.T) {
 		{
 			name: "different order",
 			fields: fields{
-				Arn:    NewArn("minio", "sqs", "", "1", "postgresql"),
+				Arn:    NewArn("obstor", "sqs", "", "1", "postgresql"),
 				Events: []EventType{ObjectAccessedAll, ObjectCreatedAll},
 				Filter: &Filter{
 					S3Key: S3Key{
@@ -165,7 +165,7 @@ func TestConfig_Equal(t *testing.T) {
 		{
 			name: "not equal",
 			fields: fields{
-				Arn:    NewArn("minio", "sqs", "", "1", "postgresql"),
+				Arn:    NewArn("obstor", "sqs", "", "1", "postgresql"),
 				Events: []EventType{ObjectAccessedAll},
 				Filter: &Filter{
 					S3Key: S3Key{
@@ -243,7 +243,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -263,13 +263,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -294,7 +294,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -318,13 +318,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -349,7 +349,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -369,13 +369,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -400,7 +400,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -410,13 +410,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -441,7 +441,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -461,13 +461,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -492,7 +492,7 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sqs",
 								Region:    "",
 								AccountID: "1",
@@ -502,13 +502,13 @@ func TestConfiguration_RemoveQueueByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Queue: "arn:minio:sqs::1:postgresql",
+						Queue: "arn:obstor:sqs::1:postgresql",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sqs",
 					Region:    "",
 					AccountID: "1",
@@ -568,7 +568,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -588,13 +588,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -619,7 +619,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -643,13 +643,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -674,7 +674,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -694,13 +694,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -725,7 +725,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -745,13 +745,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 
 					Service:   "lambda",
 					Region:    "",
@@ -777,7 +777,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -787,13 +787,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -818,7 +818,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -838,13 +838,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -869,7 +869,7 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "lambda",
 								Region:    "",
 								AccountID: "1",
@@ -879,13 +879,13 @@ func TestConfiguration_RemoveLambdaByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Lambda: "arn:minio:lambda::1:provider",
+						Lambda: "arn:obstor:lambda::1:provider",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "lambda",
 					Region:    "",
 					AccountID: "1",
@@ -945,7 +945,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -965,13 +965,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",
@@ -996,7 +996,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -1020,13 +1020,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",
@@ -1051,7 +1051,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -1071,13 +1071,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",
@@ -1102,7 +1102,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -1112,13 +1112,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",
@@ -1143,7 +1143,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -1163,13 +1163,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								},
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",
@@ -1194,7 +1194,7 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 						Config: Config{
 							ID: "",
 							Arn: Arn{
-								Partition: "minio",
+								Partition: "obstor",
 								Service:   "sns",
 								Region:    "",
 								AccountID: "1",
@@ -1204,13 +1204,13 @@ func TestConfiguration_RemoveTopicByArnEventsPrefixSuffix(t *testing.T) {
 								ObjectAccessedAll,
 							},
 						},
-						Topic: "arn:minio:sns::1:kafka",
+						Topic: "arn:obstor:sns::1:kafka",
 					},
 				},
 			},
 			args: args{
 				arn: Arn{
-					Partition: "minio",
+					Partition: "obstor",
 					Service:   "sns",
 					Region:    "",
 					AccountID: "1",

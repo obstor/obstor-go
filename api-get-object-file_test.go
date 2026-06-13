@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func TestFGetObjectReturnSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// New - instantiate minio client with options
+	// New - instantiate obstor client with options
 	clnt, err := New(srv.Listener.Addr().String(), &Options{
 		Region: "us-east-1",
 	})
@@ -44,7 +44,7 @@ func TestFGetObjectReturnSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	localFilePath := filepath.Join(t.TempDir(), "minio_test_fgetobject_file")
+	localFilePath := filepath.Join(t.TempDir(), "obstor_test_fgetobject_file")
 
 	err = clnt.FGetObject(context.Background(), "bucketName", "objectName", localFilePath, GetObjectOptions{})
 	if err != nil {
@@ -70,7 +70,7 @@ func TestFGetObjectReturnSuccessIfFileNameLengthIs255(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// New - instantiate minio client with options
+	// New - instantiate obstor client with options
 	clnt, err := New(srv.Listener.Addr().String(), &Options{
 		Region: "us-east-1",
 	})

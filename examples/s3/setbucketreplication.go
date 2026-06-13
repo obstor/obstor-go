@@ -25,9 +25,9 @@ import (
 	"encoding/xml"
 	"log"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/replication"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/replication"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// This replication ARN should have been generated for replication endpoint using `mc admin bucket remote` command
-	replCfg.Role = "arn:minio:replica::dadddae7-f1d7-440f-b5d6-651aa9a8c8a7:dest"
+	replCfg.Role = "arn:obstor:replica::dadddae7-f1d7-440f-b5d6-651aa9a8c8a7:dest"
 	// Set replication config on a bucket
 	err = s3Client.SetBucketReplication(context.Background(), "my-bucketname", replCfg)
 	if err != nil {

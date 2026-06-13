@@ -26,9 +26,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/sio"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/sio"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -41,7 +41,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -73,7 +73,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	_, err = s3Client.PutObject(context.Background(), "my-bucketname", "my-objectname", encrypted, int64(encSize), minio.PutObjectOptions{})
+	_, err = s3Client.PutObject(context.Background(), "my-bucketname", "my-objectname", encrypted, int64(encSize), obstor.PutObjectOptions{})
 	if err != nil {
 		log.Fatalln(err)
 	}

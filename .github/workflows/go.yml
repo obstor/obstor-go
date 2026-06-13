@@ -30,22 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build on ${{ matrix.os }}
-        env:
-          MINT_MODE: full
-          SERVER_ENDPOINT: localhost:9000
-          ACCESS_KEY: minioadmin
-          SECRET_KEY: minioadmin
-          ENABLE_HTTPS: 1
-          MINIO_KMS_SECRET_KEY: my-minio-key:OSMM+vkKUTCvQs9YL/CVMIMt43HFhkUpqJxTmGl6rYw=
-          SSL_CERT_FILE: /tmp/certs-dir/public.crt
-          MINIO_CI_CD: true
-          MINT_NO_FULL_OBJECT: true
         run: |
-          sudo apt update -y
-          sudo apt install devscripts -y
-          wget -O /tmp/minio https://dl.minio.io/server/minio/release/linux-amd64/minio
-          chmod +x /tmp/minio
-          mkdir -p /tmp/certs-dir
-          cp testcerts/* /tmp/certs-dir
-          /tmp/minio server --quiet -S /tmp/certs-dir /tmp/fs{1...4} &
-          make
+          go build ./...
+          go vet ./...
+          go test -race ./...

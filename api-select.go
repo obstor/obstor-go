@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -31,8 +31,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // CSVFileHeaderInfo - is the parameter for whether to utilize headers.
@@ -55,7 +55,7 @@ const (
 	SelectCompressionGZIP SelectCompressionType = "GZIP"
 	SelectCompressionBZIP SelectCompressionType = "BZIP2"
 
-	// Non-standard compression schemes, supported by MinIO hosts:
+	// Non-standard compression schemes, supported by Obstor hosts:
 
 	SelectCompressionZSTD   SelectCompressionType = "ZSTD"   // Zstandard compression.
 	SelectCompressionLZ4    SelectCompressionType = "LZ4"    // LZ4 Stream

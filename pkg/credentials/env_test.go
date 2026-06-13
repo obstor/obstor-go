@@ -73,13 +73,13 @@ func TestEnvAWSRetrieve(t *testing.T) {
 	}
 }
 
-func TestEnvMinioRetrieve(t *testing.T) {
+func TestEnvObstorRetrieve(t *testing.T) {
 	os.Clearenv()
 
-	t.Setenv("MINIO_ACCESS_KEY", "access")
-	t.Setenv("MINIO_SECRET_KEY", "secret")
+	t.Setenv("OBSTOR_ACCESS_KEY", "access")
+	t.Setenv("OBSTOR_SECRET_KEY", "secret")
 
-	e := EnvMinio{}
+	e := EnvObstor{}
 	if !e.IsExpired() {
 		t.Error("Expect creds to be expired before retrieve.")
 	}

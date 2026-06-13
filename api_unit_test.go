@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"net/url"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/policy"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/policy"
 )
 
 // Tests valid hosts for location.
@@ -212,7 +212,7 @@ func TestMakeTargetURL(t *testing.T) {
 	}
 
 	for i, testCase := range testCases {
-		// Initialize a MinIO client
+		// Initialize a Obstor client
 		c, _ := New(testCase.addr, &Options{
 			Creds:  credentials.NewStaticV4("foo", "bar", ""),
 			Secure: testCase.secure,

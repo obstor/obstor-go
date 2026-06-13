@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 const (
@@ -48,7 +48,7 @@ func TestGetObjectCore(t *testing.T) {
 		t.Skip("skipping functional tests for the short runs")
 	}
 
-	// Instantiate new minio core client object.
+	// Instantiate new obstor core client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -63,10 +63,10 @@ func TestGetObjectCore(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -245,7 +245,7 @@ func TestGetObjectContentEncoding(t *testing.T) {
 		t.Skip("skipping functional tests for the short runs")
 	}
 
-	// Instantiate new minio core client object.
+	// Instantiate new obstor core client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -260,10 +260,10 @@ func TestGetObjectContentEncoding(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -318,7 +318,7 @@ func TestGetBucketPolicy(t *testing.T) {
 		t.Skip("skipping functional tests for short runs")
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -333,10 +333,10 @@ func TestGetBucketPolicy(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -381,7 +381,7 @@ func TestCoreCopyObject(t *testing.T) {
 		t.Skip("skipping functional tests for short runs")
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -396,10 +396,10 @@ func TestCoreCopyObject(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -504,7 +504,7 @@ func TestCoreCopyObjectPart(t *testing.T) {
 		t.Skip("skipping functional tests for short runs")
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -519,10 +519,10 @@ func TestCoreCopyObjectPart(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -657,7 +657,7 @@ func TestCorePutObject(t *testing.T) {
 		t.Skip("skipping functional tests for short runs")
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	c, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -672,10 +672,10 @@ func TestCorePutObject(t *testing.T) {
 	// c.TraceOn(os.Stderr)
 
 	// Set user agent.
-	c.SetAppInfo("MinIO-go-FunctionalTest", "0.1.0")
+	c.SetAppInfo("Obstor-go-FunctionalTest", "0.1.0")
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = c.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -762,7 +762,7 @@ func TestCoreGetObjectMetadata(t *testing.T) {
 	}
 
 	// Generate a new random bucket name.
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 
 	// Make a new bucket.
 	err = core.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
@@ -811,7 +811,7 @@ func TestCoreMultipartUpload(t *testing.T) {
 		t.Skip("skipping functional tests for the short runs")
 	}
 
-	// Instantiate new minio client object.
+	// Instantiate new obstor client object.
 	core, err := NewCore(
 		os.Getenv(serverEndpoint),
 		&Options{
@@ -822,7 +822,7 @@ func TestCoreMultipartUpload(t *testing.T) {
 		t.Fatal("Error:", err)
 	}
 
-	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "minio-go-test")
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "obstor-go-test")
 	// Make a new bucket.
 	err = core.MakeBucket(context.Background(), bucketName, MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {

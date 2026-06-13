@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 // Multipart upload defaults.
 
@@ -111,24 +111,24 @@ const (
 
 	// Replication status
 	amzBucketReplicationStatus = "X-Amz-Replication-Status"
-	// Minio specific Replication/lifecycle transition extension
-	minIOBucketSourceMTime = "X-Minio-Source-Mtime"
+	// Obstor specific Replication/lifecycle transition extension
+	obstorBucketSourceMTime = "X-Obstor-Source-Mtime"
 
-	minIOBucketSourceETag              = "X-Minio-Source-Etag"
-	minIOBucketReplicationDeleteMarker = "X-Minio-Source-DeleteMarker"
-	minIOBucketReplicationProxyRequest = "X-Minio-Source-Proxy-Request"
-	minIOBucketReplicationRequest      = "X-Minio-Source-Replication-Request"
-	minIOBucketReplicationCheck        = "X-Minio-Source-Replication-Check"
+	obstorBucketSourceETag              = "X-Obstor-Source-Etag"
+	obstorBucketReplicationDeleteMarker = "X-Obstor-Source-DeleteMarker"
+	obstorBucketReplicationProxyRequest = "X-Obstor-Source-Proxy-Request"
+	obstorBucketReplicationRequest      = "X-Obstor-Source-Replication-Request"
+	obstorBucketReplicationCheck        = "X-Obstor-Source-Replication-Check"
 
 	// Header indicates last tag update time on source
-	minIOBucketReplicationTaggingTimestamp = "X-Minio-Source-Replication-Tagging-Timestamp"
+	obstorBucketReplicationTaggingTimestamp = "X-Obstor-Source-Replication-Tagging-Timestamp"
 	// Header indicates last retention update time on source
-	minIOBucketReplicationObjectRetentionTimestamp = "X-Minio-Source-Replication-Retention-Timestamp"
+	obstorBucketReplicationObjectRetentionTimestamp = "X-Obstor-Source-Replication-Retention-Timestamp"
 	// Header indicates last legalhold update time on source
-	minIOBucketReplicationObjectLegalHoldTimestamp = "X-Minio-Source-Replication-LegalHold-Timestamp"
-	minIOForceDelete                               = "x-minio-force-delete"
+	obstorBucketReplicationObjectLegalHoldTimestamp = "X-Obstor-Source-Replication-LegalHold-Timestamp"
+	obstorForceDelete                               = "x-obstor-force-delete"
 	// Header indicates delete marker replication request can be sent by source now.
-	minioTgtReplicationReady = "X-Minio-Replication-Ready"
+	obstorTgtReplicationReady = "X-Obstor-Replication-Ready"
 	// Header asks if delete marker replication request can be sent by source now.
-	isMinioTgtReplicationReady = "X-Minio-Check-Replication-Ready"
+	isObstorTgtReplicationReady = "X-Obstor-Check-Replication-Ready"
 )

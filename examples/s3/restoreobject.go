@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"log"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -46,9 +46,9 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	opts := minio.RestoreRequest{}
+	opts := obstor.RestoreRequest{}
 	opts.SetDays(1)
-	opts.SetGlacierJobParameters(minio.GlacierJobParameters{Tier: minio.TierStandard})
+	opts.SetGlacierJobParameters(obstor.GlacierJobParameters{Tier: obstor.TierStandard})
 
 	err = s3Client.RestoreObject(context.Background(), "your-bucket", "your-object", "", opts)
 	if err != nil {

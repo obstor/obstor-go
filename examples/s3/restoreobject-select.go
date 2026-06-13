@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"log"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -46,26 +46,26 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	opts := minio.RestoreRequest{}
-	opts.SetType(minio.RestoreSelect)
-	opts.SetTier(minio.TierStandard)
+	opts := obstor.RestoreRequest{}
+	opts.SetType(obstor.RestoreSelect)
+	opts.SetTier(obstor.TierStandard)
 
-	selectParameters := minio.SelectParameters{
+	selectParameters := obstor.SelectParameters{
 		Expression:     "SELECT * FROM object",
-		ExpressionType: minio.QueryExpressionTypeSQL,
-		InputSerialization: minio.SelectObjectInputSerialization{
-			CSV: &minio.CSVInputOptions{
-				FileHeaderInfo: minio.CSVFileHeaderInfoUse,
+		ExpressionType: obstor.QueryExpressionTypeSQL,
+		InputSerialization: obstor.SelectObjectInputSerialization{
+			CSV: &obstor.CSVInputOptions{
+				FileHeaderInfo: obstor.CSVFileHeaderInfoUse,
 			},
 		},
-		OutputSerialization: minio.SelectObjectOutputSerialization{
-			CSV: &minio.CSVOutputOptions{},
+		OutputSerialization: obstor.SelectObjectOutputSerialization{
+			CSV: &obstor.CSVOutputOptions{},
 		},
 	}
 
 	opts.SetSelectParameters(selectParameters)
 
-	outputLocation := minio.OutputLocation{S3: minio.S3{BucketName: "your-bucket", Prefix: "sql-request-output.csv"}}
+	outputLocation := obstor.OutputLocation{S3: obstor.S3{BucketName: "your-bucket", Prefix: "sql-request-output.csv"}}
 	opts.SetOutputLocation(outputLocation)
 
 	err = s3Client.RestoreObject(context.Background(), "your-bucket", "input.csv", "", opts)

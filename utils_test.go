@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"errors"
@@ -29,7 +29,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 func TestParseRFC7231Time(t *testing.T) {
@@ -483,55 +483,55 @@ func TestExtractObjMetadata(t *testing.T) {
 		{
 			name: "Test with valid header",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{"test"},
+				"X-Obstor-Meta-Test": []string{"test"},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{"test"},
+				"X-Obstor-Meta-Test": []string{"test"},
 			},
 		},
 		{
 			name: "Test with valid header with QEncoding characters",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{mime.QEncoding.Encode("UTF-8", "öha, das")},
+				"X-Obstor-Meta-Test": []string{mime.QEncoding.Encode("UTF-8", "öha, das")},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{"öha, das"},
+				"X-Obstor-Meta-Test": []string{"öha, das"},
 			},
 		},
 		{
 			name: "Test with valid header with BEncoding characters",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", "öha, das")},
+				"X-Obstor-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", "öha, das")},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{"öha, das"},
+				"X-Obstor-Meta-Test": []string{"öha, das"},
 			},
 		},
 		{
 			name: "Test with valid header with multi-QEncoding characters",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{mime.QEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100))},
+				"X-Obstor-Meta-Test": []string{mime.QEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100))},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{strings.Repeat("öha, das", 100)},
+				"X-Obstor-Meta-Test": []string{strings.Repeat("öha, das", 100)},
 			},
 		},
 		{
 			name: "Test with valid header with multi-BEncoding characters",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100))},
+				"X-Obstor-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100))},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{strings.Repeat("öha, das", 100)},
+				"X-Obstor-Meta-Test": []string{strings.Repeat("öha, das", 100)},
 			},
 		},
 		{
 			name: "Test with valid header with multi-BEncoding characters",
 			header: http.Header{
-				"X-Minio-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100)), mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das123", 100))},
+				"X-Obstor-Meta-Test": []string{mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das", 100)), mime.BEncoding.Encode("UTF-8", strings.Repeat("öha, das123", 100))},
 			},
 			want: http.Header{
-				"X-Minio-Meta-Test": []string{strings.Repeat("öha, das", 100), strings.Repeat("öha, das123", 100)},
+				"X-Obstor-Meta-Test": []string{strings.Repeat("öha, das", 100), strings.Repeat("öha, das123", 100)},
 			},
 		},
 	}

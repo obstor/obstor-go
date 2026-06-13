@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -91,7 +91,7 @@ func TestHttpRespToErrorResponse(t *testing.T) {
 			StatusCode: http.StatusBadRequest,
 			Code:       InvalidArgument,
 			Message:    message,
-			RequestID:  "minio",
+			RequestID:  "obstor",
 		}
 		return errResp
 	}
@@ -143,21 +143,21 @@ func TestHttpRespToErrorResponse(t *testing.T) {
 	// List of expected response.
 	// Used for asserting the actual response.
 	expectedErrResponse := []error{
-		genInvalidError("Empty http response. " + "Please report this issue at https://github.com/minio/minio-go/issues."),
-		decodeXMLError(createAPIErrorResponse(APIErrors[0], "minio-bucket")),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusNotFound}), NoSuchBucket, s3ErrorResponseMap[NoSuchBucket], "minio-bucket", ""),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusNotFound}), NoSuchKey, s3ErrorResponseMap[NoSuchKey], "minio-bucket", "Asia/"),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusForbidden}), AccessDenied, s3ErrorResponseMap[AccessDenied], "minio-bucket", ""),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusConflict}), Conflict, s3ErrorResponseMap[Conflict], "minio-bucket", ""),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusBadRequest}), "Bad Request", "Bad Request", "minio-bucket", ""),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusInternalServerError}), "Internal Server Error", "my custom object store error", "minio-bucket", ""),
-		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusInternalServerError}), "Internal Server Error", "my custom object store error, with way too long body", "minio-bucket", ""),
+		genInvalidError("Empty http response. " + "Please report this issue at https://github.com/obstor/obstor-go/issues."),
+		decodeXMLError(createAPIErrorResponse(APIErrors[0], "obstor-bucket")),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusNotFound}), NoSuchBucket, s3ErrorResponseMap[NoSuchBucket], "obstor-bucket", ""),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusNotFound}), NoSuchKey, s3ErrorResponseMap[NoSuchKey], "obstor-bucket", "Asia/"),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusForbidden}), AccessDenied, s3ErrorResponseMap[AccessDenied], "obstor-bucket", ""),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusConflict}), Conflict, s3ErrorResponseMap[Conflict], "obstor-bucket", ""),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusBadRequest}), "Bad Request", "Bad Request", "obstor-bucket", ""),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusInternalServerError}), "Internal Server Error", "my custom object store error", "obstor-bucket", ""),
+		genErrResponse(setCommonHeaders(&http.Response{StatusCode: http.StatusInternalServerError}), "Internal Server Error", "my custom object store error, with way too long body", "obstor-bucket", ""),
 	}
 
 	// List of http response to be used as input.
 	inputResponses := []*http.Response{
 		nil,
-		createAPIErrorResponse(APIErrors[0], "minio-bucket"),
+		createAPIErrorResponse(APIErrors[0], "obstor-bucket"),
 		genEmptyBodyResponse(http.StatusNotFound),
 		genEmptyBodyResponse(http.StatusNotFound),
 		genEmptyBodyResponse(http.StatusForbidden),
@@ -175,15 +175,15 @@ func TestHttpRespToErrorResponse(t *testing.T) {
 		expectedResult error
 		// flag indicating whether tests should pass.
 	}{
-		{"minio-bucket", "", inputResponses[0], expectedErrResponse[0]},
-		{"minio-bucket", "", inputResponses[1], expectedErrResponse[1]},
-		{"minio-bucket", "", inputResponses[2], expectedErrResponse[2]},
-		{"minio-bucket", "Asia/", inputResponses[3], expectedErrResponse[3]},
-		{"minio-bucket", "", inputResponses[4], expectedErrResponse[4]},
-		{"minio-bucket", "", inputResponses[5], expectedErrResponse[5]},
-		{"minio-bucket", "", inputResponses[6], expectedErrResponse[6]},
-		{"minio-bucket", "", inputResponses[7], expectedErrResponse[7]},
-		{"minio-bucket", "", inputResponses[8], expectedErrResponse[8]},
+		{"obstor-bucket", "", inputResponses[0], expectedErrResponse[0]},
+		{"obstor-bucket", "", inputResponses[1], expectedErrResponse[1]},
+		{"obstor-bucket", "", inputResponses[2], expectedErrResponse[2]},
+		{"obstor-bucket", "Asia/", inputResponses[3], expectedErrResponse[3]},
+		{"obstor-bucket", "", inputResponses[4], expectedErrResponse[4]},
+		{"obstor-bucket", "", inputResponses[5], expectedErrResponse[5]},
+		{"obstor-bucket", "", inputResponses[6], expectedErrResponse[6]},
+		{"obstor-bucket", "", inputResponses[7], expectedErrResponse[7]},
+		{"obstor-bucket", "", inputResponses[8], expectedErrResponse[8]},
 	}
 
 	for i, testCase := range testCases {
@@ -201,10 +201,10 @@ func TestErrEntityTooLarge(t *testing.T) {
 		StatusCode: http.StatusBadRequest,
 		Code:       EntityTooLarge,
 		Message:    msg,
-		BucketName: "minio-bucket",
+		BucketName: "obstor-bucket",
 		Key:        "Asia/",
 	}
-	actualResult := errEntityTooLarge(1000000, 99999, "minio-bucket", "Asia/")
+	actualResult := errEntityTooLarge(1000000, 99999, "obstor-bucket", "Asia/")
 	if !reflect.DeepEqual(expectedResult, actualResult) {
 		t.Errorf("Expected result to be '%#v', but instead got '%#v'", expectedResult, actualResult)
 	}
@@ -217,10 +217,10 @@ func TestErrEntityTooSmall(t *testing.T) {
 		StatusCode: http.StatusBadRequest,
 		Code:       EntityTooSmall,
 		Message:    msg,
-		BucketName: "minio-bucket",
+		BucketName: "obstor-bucket",
 		Key:        "Asia/",
 	}
-	actualResult := errEntityTooSmall(-1, "minio-bucket", "Asia/")
+	actualResult := errEntityTooSmall(-1, "obstor-bucket", "Asia/")
 	if !reflect.DeepEqual(expectedResult, actualResult) {
 		t.Errorf("Expected result to be '%#v', but instead got '%#v'", expectedResult, actualResult)
 	}
@@ -234,10 +234,10 @@ func TestErrUnexpectedEOF(t *testing.T) {
 		StatusCode: http.StatusBadRequest,
 		Code:       UnexpectedEOF,
 		Message:    msg,
-		BucketName: "minio-bucket",
+		BucketName: "obstor-bucket",
 		Key:        "Asia/",
 	}
-	actualResult := errUnexpectedEOF(100, 101, "minio-bucket", "Asia/")
+	actualResult := errUnexpectedEOF(100, 101, "obstor-bucket", "Asia/")
 	if !reflect.DeepEqual(expectedResult, actualResult) {
 		t.Errorf("Expected result to be '%#v', but instead got '%#v'", expectedResult, actualResult)
 	}
@@ -249,7 +249,7 @@ func TestErrInvalidArgument(t *testing.T) {
 		StatusCode: http.StatusBadRequest,
 		Code:       InvalidArgument,
 		Message:    "Invalid Argument",
-		RequestID:  "minio",
+		RequestID:  "obstor",
 	}
 	actualResult := errInvalidArgument("Invalid Argument")
 	if !reflect.DeepEqual(expectedResult, actualResult) {
@@ -261,7 +261,7 @@ func TestErrInvalidArgument(t *testing.T) {
 func TestErrWithoutMessage(t *testing.T) {
 	errResp := ErrorResponse{
 		Code:      AccessDenied,
-		RequestID: "minio",
+		RequestID: "obstor",
 	}
 
 	if errResp.Error() != s3ErrorResponseMap[AccessDenied] {
@@ -270,7 +270,7 @@ func TestErrWithoutMessage(t *testing.T) {
 
 	errResp = ErrorResponse{
 		Code:      InvalidArgument,
-		RequestID: "minio",
+		RequestID: "obstor",
 	}
 	if errResp.Error() != fmt.Sprintf("Error response code %s.", errResp.Code) {
 		t.Errorf("Expected \"Error response code %s.\", got \"%s\"", InvalidArgument, errResp)

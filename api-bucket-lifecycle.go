@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/lifecycle"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/lifecycle"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // SetBucketLifecycle set the lifecycle on an existing bucket.
@@ -156,9 +156,9 @@ func (c *Client) getBucketLifecycle(ctx context.Context, bucketName string) ([]b
 		return nil, time.Time{}, err
 	}
 
-	const minIOLifecycleCfgUpdatedAt = "X-Minio-LifecycleConfig-UpdatedAt"
+	const obstorLifecycleCfgUpdatedAt = "X-Obstor-LifecycleConfig-UpdatedAt"
 	var updatedAt time.Time
-	if timeStr := resp.Header.Get(minIOLifecycleCfgUpdatedAt); timeStr != "" {
+	if timeStr := resp.Header.Get(obstorLifecycleCfgUpdatedAt); timeStr != "" {
 		updatedAt, err = time.Parse(iso8601DateFormat, timeStr)
 		if err != nil {
 			return nil, time.Time{}, err

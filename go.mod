@@ -1,6 +1,6 @@
-module github.com/minio/minio-go/v7
+module github.com/obstor/obstor-go/v7
 
-go 1.25.0
+go 1.26.0
 
 tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
@@ -10,8 +10,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/crc32 v1.3.0
-	github.com/minio/crc64nvme v1.1.1
-	github.com/minio/md5-simd v1.1.2
+	github.com/obstor/crc64nvme v1.1.1
+	github.com/obstor/md5-simd v1.1.2
 	github.com/rs/xid v1.6.0
 	github.com/tinylib/msgp v1.6.1
 	github.com/zeebo/xxh3 v1.1.0

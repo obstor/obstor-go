@@ -27,7 +27,7 @@ import (
 
 var errMissingStorageClass = errors.New("storage-class cannot be empty")
 
-// AbortIncompleteMultipartUpload structure, not supported yet on MinIO
+// AbortIncompleteMultipartUpload structure, not supported yet on Obstor
 type AbortIncompleteMultipartUpload struct {
 	XMLName             xml.Name       `xml:"AbortIncompleteMultipartUpload,omitempty"  json:"-"`
 	DaysAfterInitiation ExpirationDays `xml:"DaysAfterInitiation,omitempty" json:"DaysAfterInitiation,omitempty"`

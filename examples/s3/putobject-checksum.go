@@ -28,8 +28,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -74,7 +74,7 @@ func main() {
 
 	// Upload object.
 	// Checksums are different with multipart, so we disable that.
-	info, err := s3Client.PutObject(context.Background(), "my-bucket", "my-objectname", object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream", UserMetadata: meta, DisableMultipart: true})
+	info, err := s3Client.PutObject(context.Background(), "my-bucket", "my-objectname", object, objectStat.Size(), obstor.PutObjectOptions{ContentType: "application/octet-stream", UserMetadata: meta, DisableMultipart: true})
 	if err != nil {
 		log.Fatalln(err)
 	}

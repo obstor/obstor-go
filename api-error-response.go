@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -68,7 +68,7 @@ type ErrorResponse struct {
 //
 // For example:
 //
-//	import s3 "github.com/minio/minio-go/v7"
+//	import s3 "github.com/obstor/obstor-go/v7"
 //	...
 //	...
 //	reader, stat, err := s3.GetObject(...)
@@ -100,7 +100,7 @@ func (e ErrorResponse) Error() string {
 // Common string for errors to report issue location in unexpected
 // cases.
 const (
-	reportIssue = "Please report this issue at https://github.com/minio/minio-go/issues."
+	reportIssue = "Please report this issue at https://github.com/obstor/obstor-go/issues."
 )
 
 // xmlDecodeAndBody reads the whole body up to 1MB and
@@ -199,11 +199,11 @@ func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string)
 		}
 	}
 
-	code := resp.Header.Get("x-minio-error-code")
+	code := resp.Header.Get("x-obstor-error-code")
 	if code != "" {
 		errResp.Code = code
 	}
-	desc := resp.Header.Get("x-minio-error-desc")
+	desc := resp.Header.Get("x-obstor-error-desc")
 	if desc != "" {
 		errResp.Message = strings.Trim(desc, `"`)
 	}
@@ -279,7 +279,7 @@ func errInvalidArgument(message string) error {
 		StatusCode: http.StatusBadRequest,
 		Code:       InvalidArgument,
 		Message:    message,
-		RequestID:  "minio",
+		RequestID:  "obstor",
 	}
 }
 
@@ -290,6 +290,6 @@ func errAPINotSupported(message string) error {
 		StatusCode: http.StatusNotImplemented,
 		Code:       APINotSupported,
 		Message:    message,
-		RequestID:  "minio",
+		RequestID:  "obstor",
 	}
 }

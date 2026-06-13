@@ -24,9 +24,9 @@ import (
 	"context"
 	"log"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -55,21 +55,21 @@ func main() {
 
 	// Source objects to concatenate. We also specify decryption
 	// key for each
-	src1 := minio.CopySrcOptions{
+	src1 := obstor.CopySrcOptions{
 		Bucket:     "bucket1",
 		Object:     "object1",
 		Encryption: decKey,
 		MatchETag:  "31624deb84149d2f8ef9c385918b653a",
 	}
 
-	src2 := minio.CopySrcOptions{
+	src2 := obstor.CopySrcOptions{
 		Bucket:     "bucket2",
 		Object:     "object2",
 		Encryption: decKey,
 		MatchETag:  "f8ef9c385918b653a31624deb84149d2",
 	}
 
-	src3 := minio.CopySrcOptions{
+	src3 := obstor.CopySrcOptions{
 		Bucket:     "bucket3",
 		Object:     "object3",
 		Encryption: decKey,
@@ -77,13 +77,13 @@ func main() {
 	}
 
 	// Create slice of sources.
-	srcs := []minio.CopySrcOptions{src1, src2, src3}
+	srcs := []obstor.CopySrcOptions{src1, src2, src3}
 
 	// Prepare destination encryption key
 	encKey, _ := encrypt.NewSSEC([]byte{8, 9, 0})
 
 	// Create destination info
-	dst := minio.CopyDestOptions{
+	dst := obstor.CopyDestOptions{
 		Bucket:     "bucket",
 		Object:     "object",
 		Encryption: encKey,

@@ -26,8 +26,8 @@ import (
 	"log"
 	"os"
 
-	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	obstor "github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -47,19 +47,19 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	opts := minio.SelectObjectOptions{
+	opts := obstor.SelectObjectOptions{
 		Expression:     "select count(*) from s3object",
-		ExpressionType: minio.QueryExpressionTypeSQL,
-		InputSerialization: minio.SelectObjectInputSerialization{
-			CompressionType: minio.SelectCompressionNONE,
-			CSV: &minio.CSVInputOptions{
-				FileHeaderInfo:  minio.CSVFileHeaderInfoNone,
+		ExpressionType: obstor.QueryExpressionTypeSQL,
+		InputSerialization: obstor.SelectObjectInputSerialization{
+			CompressionType: obstor.SelectCompressionNONE,
+			CSV: &obstor.CSVInputOptions{
+				FileHeaderInfo:  obstor.CSVFileHeaderInfoNone,
 				RecordDelimiter: "\n",
 				FieldDelimiter:  ",",
 			},
 		},
-		OutputSerialization: minio.SelectObjectOutputSerialization{
-			CSV: &minio.CSVOutputOptions{
+		OutputSerialization: obstor.SelectObjectOutputSerialization{
+			CSV: &obstor.CSVOutputOptions{
 				RecordDelimiter: "\n",
 				FieldDelimiter:  ",",
 			},

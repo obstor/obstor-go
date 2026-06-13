@@ -26,7 +26,7 @@ import (
 	"strings"
 )
 
-// N B minio-go should compile on go1.5.3 onwards and httptest package is
+// N B obstor-go should compile on go1.5.3 onwards and httptest package is
 // available only from go.1.7.x. The following function is taken from
 // Go httptest package to be able to build on older versions of Go.
 

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -28,9 +28,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/obstor/obstor-go/v7/pkg/encrypt"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/tags"
 )
 
 // CopyDestOptions represents options specified by user for CopyObject/ComposeObject APIs
@@ -152,7 +152,7 @@ func (opts CopyDestOptions) Marshal(header http.Header) {
 	if opts.ReplaceMetadata {
 		header.Set("x-amz-metadata-directive", replaceDirective)
 		for k, v := range filterCustomMeta(opts.UserMetadata) {
-			if isAmzHeader(k) || isStandardHeader(k) || isStorageClassHeader(k) || isMinioHeader(k) {
+			if isAmzHeader(k) || isStandardHeader(k) || isStorageClassHeader(k) || isObstorHeader(k) {
 				header.Set(k, v)
 			} else {
 				header.Set("x-amz-meta-"+k, v)
@@ -247,25 +247,25 @@ func (c *Client) copyObjectDo(ctx context.Context, srcBucket, srcObject, destBuc
 		headers.Set(amzBucketReplicationStatus, string(dstOpts.Internal.ReplicationStatus))
 	}
 	if !dstOpts.Internal.SourceMTime.IsZero() {
-		headers.Set(minIOBucketSourceMTime, dstOpts.Internal.SourceMTime.Format(time.RFC3339Nano))
+		headers.Set(obstorBucketSourceMTime, dstOpts.Internal.SourceMTime.Format(time.RFC3339Nano))
 	}
 	if dstOpts.Internal.SourceETag != "" {
-		headers.Set(minIOBucketSourceETag, dstOpts.Internal.SourceETag)
+		headers.Set(obstorBucketSourceETag, dstOpts.Internal.SourceETag)
 	}
 	if dstOpts.Internal.ReplicationRequest {
-		headers.Set(minIOBucketReplicationRequest, "true")
+		headers.Set(obstorBucketReplicationRequest, "true")
 	}
 	if dstOpts.Internal.ReplicationValidityCheck {
-		headers.Set(minIOBucketReplicationCheck, "true")
+		headers.Set(obstorBucketReplicationCheck, "true")
 	}
 	if !dstOpts.Internal.LegalholdTimestamp.IsZero() {
-		headers.Set(minIOBucketReplicationObjectLegalHoldTimestamp, dstOpts.Internal.LegalholdTimestamp.Format(time.RFC3339Nano))
+		headers.Set(obstorBucketReplicationObjectLegalHoldTimestamp, dstOpts.Internal.LegalholdTimestamp.Format(time.RFC3339Nano))
 	}
 	if !dstOpts.Internal.RetentionTimestamp.IsZero() {
-		headers.Set(minIOBucketReplicationObjectRetentionTimestamp, dstOpts.Internal.RetentionTimestamp.Format(time.RFC3339Nano))
+		headers.Set(obstorBucketReplicationObjectRetentionTimestamp, dstOpts.Internal.RetentionTimestamp.Format(time.RFC3339Nano))
 	}
 	if !dstOpts.Internal.TaggingTimestamp.IsZero() {
-		headers.Set(minIOBucketReplicationTaggingTimestamp, dstOpts.Internal.TaggingTimestamp.Format(time.RFC3339Nano))
+		headers.Set(obstorBucketReplicationTaggingTimestamp, dstOpts.Internal.TaggingTimestamp.Format(time.RFC3339Nano))
 	}
 
 	if len(dstOpts.UserTags) != 0 {

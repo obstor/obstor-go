@@ -34,11 +34,11 @@ package credentials
 //	creds := credentials.NewChainCredentials(
 //	    []credentials.Provider{
 //	        &credentials.EnvAWSS3{},
-//	        &credentials.EnvMinio{},
+//	        &credentials.EnvObstor{},
 //	    })
 //
 //	// Usage of ChainCredentials.
-//	mc, err := minio.NewWithCredentials(endpoint, creds, secure, "us-east-1")
+//	mc, err := obstor.NewWithCredentials(endpoint, creds, secure, "us-east-1")
 //	if err != nil {
 //	     log.Fatalln(err)
 //	}

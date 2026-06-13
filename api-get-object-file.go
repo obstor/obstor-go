@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // FGetObject - download contents of an object to a local file.
@@ -68,8 +68,8 @@ func (c *Client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		return err
 	}
 
-	// Write to a temporary file "fileName.part.minio" before saving.
-	filePartPath := filepath.Join(filepath.Dir(filePath), sum256Hex([]byte(filepath.Base(filePath)+objectStat.ETag))+".part.minio")
+	// Write to a temporary file "fileName.part.obstor" before saving.
+	filePartPath := filepath.Join(filepath.Dir(filePath), sum256Hex([]byte(filepath.Base(filePath)+objectStat.ETag))+".part.obstor")
 
 	// If exists, open in append mode. If not create it as a part file.
 	filePart, err := os.OpenFile(filePartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)

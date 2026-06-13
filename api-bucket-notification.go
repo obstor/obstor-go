@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bufio"
@@ -27,8 +27,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/notification"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/notification"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // SetBucketNotification saves a new bucket notification with a context to control cancellations and timeouts.
@@ -119,12 +119,12 @@ func processBucketNotificationResponse(bucketName string, resp *http.Response) (
 	return bucketNotification, nil
 }
 
-// ListenNotification listen for all events, this is a MinIO specific API
+// ListenNotification listen for all events, this is a Obstor specific API
 func (c *Client) ListenNotification(ctx context.Context, prefix, suffix string, events []string) <-chan notification.Info {
 	return c.ListenBucketNotification(ctx, "", prefix, suffix, events)
 }
 
-// ListenBucketNotification listen for bucket events, this is a MinIO specific API
+// ListenBucketNotification listen for bucket events, this is a Obstor specific API
 func (c *Client) ListenBucketNotification(ctx context.Context, bucketName, prefix, suffix string, events []string) <-chan notification.Info {
 	notificationInfoCh := make(chan notification.Info, 1)
 	const notificationCapacity = 4 * 1024 * 1024
@@ -150,7 +150,7 @@ func (c *Client) ListenBucketNotification(ctx context.Context, bucketName, prefi
 		if s3utils.IsAmazonEndpoint(*c.endpointURL) || s3utils.IsGoogleEndpoint(*c.endpointURL) {
 			select {
 			case notificationInfoCh <- notification.Info{
-				Err: errAPINotSupported("Listening for bucket notification is specific only to `minio` server endpoints"),
+				Err: errAPINotSupported("Listening for bucket notification is specific only to `obstor` server endpoints"),
 			}:
 			case <-ctx.Done():
 			}

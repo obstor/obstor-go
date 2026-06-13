@@ -24,8 +24,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/obstor/obstor-go/v7"
+	"github.com/obstor/obstor-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	// New returns an Amazon S3 compatible client object. API compatibility (v2 or v4) is automatically
 	// determined based on the Endpoint value.
-	s3Client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	s3Client, err := obstor.New("s3.amazonaws.com", &obstor.Options{
 		Creds:  credentials.NewStaticV4("YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", ""),
 		Secure: true,
 	})
@@ -45,13 +45,13 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	objectsCh := make(chan minio.ObjectInfo)
+	objectsCh := make(chan obstor.ObjectInfo)
 
 	// Send object names that are needed to be removed to objectsCh
 	go func() {
 		defer close(objectsCh)
 		// List all objects from a bucket-name with a matching prefix.
-		opts := minio.ListObjectsOptions{Prefix: "my-prefixname", Recursive: true}
+		opts := obstor.ListObjectsOptions{Prefix: "my-prefixname", Recursive: true}
 		for object := range s3Client.ListObjects(context.Background(), "my-bucketname", opts) {
 			if object.Err != nil {
 				log.Fatalln(object.Err)
@@ -61,7 +61,7 @@ func main() {
 	}()
 
 	// Call RemoveObjects API
-	errorCh := s3Client.RemoveObjects(context.Background(), "my-bucketname", objectsCh, minio.RemoveObjectsOptions{})
+	errorCh := s3Client.RemoveObjects(context.Background(), "my-bucketname", objectsCh, obstor.RemoveObjectsOptions{})
 
 	// Print errors received from RemoveObjects API
 	for e := range errorCh {

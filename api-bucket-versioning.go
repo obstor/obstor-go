@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package obstor
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/obstor/obstor-go/v7/pkg/s3utils"
 )
 
 // SetBucketVersioning sets a bucket versioning configuration
@@ -86,7 +86,7 @@ type BucketVersioningConfiguration struct {
 	XMLName   xml.Name `xml:"VersioningConfiguration"`
 	Status    string   `xml:"Status"`
 	MFADelete string   `xml:"MfaDelete,omitempty"`
-	// MinIO extension - allows selective, prefix-level versioning exclusion.
+	// Obstor extension - allows selective, prefix-level versioning exclusion.
 	// Requires versioning to be enabled
 	ExcludedPrefixes []ExcludedPrefix `xml:",omitempty"`
 	ExcludeFolders   bool             `xml:",omitempty"`
