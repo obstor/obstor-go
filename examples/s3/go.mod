@@ -2,12 +2,12 @@ module github.com/obstor/obstor-go/examples/s3
 
 go 1.26.0
 
-// Overridden by `replace` below, to point all versions at the local obstor-go source, so version shouldn't matter here.
-require github.com/obstor/obstor-go/v7 v7.0.73
+// Overridden by `replace` below
+require github.com/obstor/obstor-go/v7 v7.1.0
 
 require (
 	github.com/cheggaaa/pb v1.0.29
-	github.com/obstor/sio v0.3.0
+	github.com/obstor/sio v0.5.1
 	golang.org/x/crypto v0.51.0
 )
 
