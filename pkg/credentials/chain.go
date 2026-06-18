@@ -38,7 +38,7 @@ package credentials
 //	    })
 //
 //	// Usage of ChainCredentials.
-//	mc, err := obstor.NewWithCredentials(endpoint, creds, secure, "us-east-1")
+//	obstorClient, err := obstor.NewWithCredentials(endpoint, creds, secure, "us-east-1")
 //	if err != nil {
 //	     log.Fatalln(err)
 //	}

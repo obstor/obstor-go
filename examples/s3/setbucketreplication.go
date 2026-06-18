@@ -56,7 +56,8 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// This replication ARN should have been generated for replication endpoint using `mc admin bucket remote` command
+	// This replication ARN should have been generated for the replication endpoint by configuring
+	// the replication target in the Obstor web console (Buckets > Replication) or via the admin API.
 	replCfg.Role = "arn:obstor:replica::dadddae7-f1d7-440f-b5d6-651aa9a8c8a7:dest"
 	// Set replication config on a bucket
 	err = s3Client.SetBucketReplication(context.Background(), "my-bucketname", replCfg)

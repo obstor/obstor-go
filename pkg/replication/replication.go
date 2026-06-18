@@ -105,7 +105,7 @@ func (c *Config) AddRule(opts Options) error {
 	if err != nil {
 		return err
 	}
-	var compatSw bool // true if RoleArn is used with new mc client and older obstor version prior to multisite
+	var compatSw bool // true if RoleArn is set against an older obstor version prior to multisite
 	if opts.RoleArn != "" {
 		tokens := strings.Split(opts.RoleArn, ":")
 		if len(tokens) != 6 {

@@ -39,7 +39,7 @@ func main() {
 		YOURACCESSKEYID     = "Q3AM3UQ867SPQQA43P2F"
 		YOURSECRETACCESSKEY = "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
 		YOURENDPOINT        = "demo.obstor.net"
-		YOURBUCKET          = "mybucket" // 'mc mb demo/mybucket' if it does not exist.
+		YOURBUCKET          = "mybucket" // Create it first if it does not exist.
 	)
 
 	// Requests are always secure (HTTPS) by default. Set secure=false to enable insecure (HTTP) access.

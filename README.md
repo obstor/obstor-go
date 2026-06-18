@@ -5,7 +5,7 @@ The Obstor Go Client SDK provides straightforward APIs to access any Amazon S3 c
 
 This Quickstart Guide covers how to install the Obstor client SDK, connect to Obstor, and create a sample file uploader. For a complete list of APIs and examples, see the [godoc documentation](https://pkg.go.dev/github.com/obstor/obstor-go/v7) or [Go Client API Reference](https://obstor.net/docs/obstor/linux/developers/go/API.html).
 
-These examples presume a working [Go development environment](https://golang.org/doc/install) and the [Obstor `mc` command line tool](https://obstor.net/docs/obstor/linux/reference/obstor-mc.html).
+These examples presume a working [Go development environment](https://golang.org/doc/install). To browse buckets and objects from the command line you can use [rclone](https://rclone.org/s3/) configured with an `obstor:` remote, or the Obstor web console.
 
 Download from Github
 --------------------
@@ -69,7 +69,7 @@ This example does the following:
 -	Connects to the Obstor `demo` server using the provided credentials.
 -	Creates a bucket named `testbucket`.
 -	Uploads a file named `testdata` from `/tmp`.
--	Verifies the file was created using `mc ls`.
+-	Verifies the file was created using `rclone ls`.
 
 	```go
 	// FileUploader.go Obstor example
@@ -162,11 +162,13 @@ The output resembles the following:
 2023/11/01 14:27:55 Successfully uploaded testdata of size 20480
 ```
 
-**3. Verify the Uploaded File With `mc ls`:**
+**3. Verify the Uploaded File With `rclone ls`:**
+
+This assumes an `obstor:` remote configured against your server (see the [rclone S3 docs](https://rclone.org/s3/)).
 
 ```sh
-mc ls demo/testbucket
-[2023-11-01 14:27:55 UTC]  20KiB STANDARD TestDataFile
+rclone ls obstor:testbucket
+    20480 testdata
 ```
 
 API Reference

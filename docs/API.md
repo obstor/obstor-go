@@ -2192,7 +2192,7 @@ fmt.Printf("%+v\n", versioningConfig)
 
 ### SetBucketReplication(ctx context.Context, bucketName string, cfg replication.Config) error
 
-Set replication configuration on a bucket. Role can be obtained by first defining the replication target on Obstor using `mc admin bucket remote set` to associate the source and destination buckets for replication with the replication endpoint.
+Set replication configuration on a bucket. Role can be obtained by first defining the replication target in the Obstor dashboard under Buckets > Replication, which associates the source and destination buckets for replication with the replication endpoint and returns the replication ARN.
 
 **Parameters**
 
