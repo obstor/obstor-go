@@ -1,4 +1,4 @@
-//go:build mint
+//go:build tests
 
 /*
  * MinIO Go Library for Amazon S3 Compatible Cloud Storage
@@ -145,7 +145,7 @@ var readFull = func(r io.Reader, buf []byte) (n int, err error) {
 func baseLogger(testName, function string, args map[string]interface{}, startTime time.Time) *slog.Logger {
 	// calculate the test case duration
 	duration := time.Since(startTime)
-	// log with the fields as per mint
+	// log with the fields as per tests
 	l := slog.With(
 		"name", "obstor-go: "+testName,
 		"duration", duration.Nanoseconds()/1000000,
@@ -294,13 +294,13 @@ func init() {
 	}
 }
 
-var mintDataDir = os.Getenv("MINT_DATA_DIR")
+var testsDataDir = os.Getenv("TESTS_DATA_DIR")
 
-func getMintDataDirFilePath(filename string) (fp string) {
-	if mintDataDir == "" {
+func getTestsDataDirFilePath(filename string) (fp string) {
+	if testsDataDir == "" {
 		return fp
 	}
-	return filepath.Join(mintDataDir, filename)
+	return filepath.Join(testsDataDir, filename)
 }
 
 func newRandomReader(seed, size int64) io.Reader {
@@ -345,18 +345,18 @@ func crcMatchesName(r io.Reader, name string) error {
 
 // read data from file if it exists or optionally create a buffer of particular size
 func getDataReader(fileName string) io.ReadCloser {
-	if mintDataDir == "" {
+	if testsDataDir == "" {
 		size := int64(dataFileMap[fileName])
 		if _, ok := dataFileCRC32[fileName]; !ok {
 			dataFileCRC32[fileName] = mustCrcReader(newRandomReader(size, size))
 		}
 		return io.NopCloser(newRandomReader(size, size))
 	}
-	reader, _ := os.Open(getMintDataDirFilePath(fileName))
+	reader, _ := os.Open(getTestsDataDirFilePath(fileName))
 	if _, ok := dataFileCRC32[fileName]; !ok {
 		dataFileCRC32[fileName] = mustCrcReader(reader)
 		reader.Close()
-		reader, _ = os.Open(getMintDataDirFilePath(fileName))
+		reader, _ = os.Open(getTestsDataDirFilePath(fileName))
 	}
 	return reader
 }
@@ -398,7 +398,7 @@ var dataFileMap = map[string]int{
 var dataFileCRC32 = map[string]uint32{}
 
 func isFullMode() bool {
-	return os.Getenv("MINT_MODE") == "full"
+	return os.Getenv("TESTS_MODE") == "full"
 }
 
 func getFuncName() string {
@@ -526,7 +526,7 @@ func testMetadataSizeLimit() {
 
 	// Meta-data greater than the 2 KB limit of AWS - PUT calls with this meta-data should fail
 	metadata := make(map[string]string)
-	metadata["X-Amz-Meta-Mint-Test"] = string(bytes.Repeat([]byte("m"), 1+UserMetadataLimit-len("X-Amz-Meta-Mint-Test")))
+	metadata["X-Amz-Meta-Tests-Test"] = string(bytes.Repeat([]byte("m"), 1+UserMetadataLimit-len("X-Amz-Meta-Tests-Test")))
 	args["metadata"] = fmt.Sprint(metadata)
 
 	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, obstor.PutObjectOptions{UserMetadata: metadata})
@@ -537,7 +537,7 @@ func testMetadataSizeLimit() {
 
 	// Meta-data (headers) greater than the 8 KB limit of AWS - PUT calls with this meta-data should fail
 	metadata = make(map[string]string)
-	metadata["X-Amz-Mint-Test"] = string(bytes.Repeat([]byte("m"), 1+HeaderSizeLimit-len("X-Amz-Mint-Test")))
+	metadata["X-Amz-Tests-Test"] = string(bytes.Repeat([]byte("m"), 1+HeaderSizeLimit-len("X-Amz-Tests-Test")))
 	args["metadata"] = fmt.Sprint(metadata)
 	_, err = c.PutObject(context.Background(), bucketName, objectName, bytes.NewReader(nil), 0, obstor.PutObjectOptions{UserMetadata: metadata})
 	if err == nil {
@@ -2126,7 +2126,7 @@ func testPutObjectWithChecksums() {
 	}
 
 	for _, test := range tests {
-		if os.Getenv("MINT_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
+		if os.Getenv("TESTS_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
 			continue
 		}
 		bufSize := dataFileMap["datafile-10-kB"]
@@ -2336,7 +2336,7 @@ func testPutObjectWithTrailingChecksums() {
 		{cs: obstor.ChecksumSHA256},
 	}
 	for _, test := range tests {
-		if os.Getenv("MINT_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
+		if os.Getenv("TESTS_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
 			continue
 		}
 		function := "PutObject(bucketName, objectName, reader,size, opts)"
@@ -2585,7 +2585,7 @@ func testPutMultipartObjectWithChecksums() {
 	}
 
 	for _, test := range tests {
-		if os.Getenv("MINT_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
+		if os.Getenv("TESTS_NO_FULL_OBJECT") != "" && test.cs.FullObjectRequested() {
 			continue
 		}
 
@@ -4584,7 +4584,7 @@ func testFPutObjectMultipart() {
 	defer cleanupBucket(bucketName, c)
 
 	// Upload 4 parts to utilize all 3 'workers' in multipart and still have a part to upload.
-	fileName := getMintDataDirFilePath("datafile-129-MB")
+	fileName := getTestsDataDirFilePath("datafile-129-MB")
 	if fileName == "" {
 		// Make a temp file with minPartSize bytes of data.
 		file, err := os.CreateTemp(os.TempDir(), "FPutObjectTest")
@@ -4679,7 +4679,7 @@ func testFPutObject() {
 
 	// Upload 3 parts worth of data to use all 3 of multiparts 'workers' and have an extra part.
 	// Use different data in part for multipart tests to check parts are uploaded in correct order.
-	fName := getMintDataDirFilePath("datafile-129-MB")
+	fName := getTestsDataDirFilePath("datafile-129-MB")
 	if fName == "" {
 		// Make a temp file with minPartSize bytes of data.
 		file, err := os.CreateTemp(os.TempDir(), "FPutObjectTest")
@@ -4832,7 +4832,7 @@ func testFPutObjectContext() {
 
 	// Upload 1 parts worth of data to use multipart upload.
 	// Use different data in part for multipart tests to check parts are uploaded in correct order.
-	fName := getMintDataDirFilePath("datafile-1-MB")
+	fName := getTestsDataDirFilePath("datafile-1-MB")
 	if fName == "" {
 		// Make a temp file with 1 MiB bytes of data.
 		file, err := os.CreateTemp(os.TempDir(), "FPutObjectContextTest")
@@ -4919,7 +4919,7 @@ func testFPutObjectContextV2() {
 
 	// Upload 1 parts worth of data to use multipart upload.
 	// Use different data in part for multipart tests to check parts are uploaded in correct order.
-	fName := getMintDataDirFilePath("datafile-1-MB")
+	fName := getTestsDataDirFilePath("datafile-1-MB")
 	if fName == "" {
 		// Make a temp file with 1 MiB bytes of data.
 		file, err := os.CreateTemp(os.TempDir(), "FPutObjectContextTest")
@@ -5739,7 +5739,7 @@ func testPresignedPostPolicy() {
 	}
 
 	// Get a 33KB file to upload and test if set post policy works
-	filePath := getMintDataDirFilePath("datafile-33-kB")
+	filePath := getTestsDataDirFilePath("datafile-33-kB")
 	if filePath == "" {
 		// Make a temp file with 33 KB data.
 		file, err := os.CreateTemp(os.TempDir(), "PresignedPostPolicyTest")
@@ -5915,7 +5915,7 @@ func testPresignedPostPolicyWrongFile() {
 
 	// At this stage, we have a policy that allows us to upload for a specific checksum.
 	// Test that uploading datafile-10-kB, with a different checksum, fails as expected
-	filePath := getMintDataDirFilePath("datafile-10-kB")
+	filePath := getTestsDataDirFilePath("datafile-10-kB")
 	if filePath == "" {
 		// Make a temp file with 10 KB data.
 		file, err := os.CreateTemp(os.TempDir(), "PresignedPostPolicyTest")
@@ -6089,7 +6089,7 @@ func testPresignedPostPolicyEmptyFileName() {
 	}
 
 	// Get a 33KB file to upload and test if set post policy works
-	filePath := getMintDataDirFilePath("datafile-33-kB")
+	filePath := getTestsDataDirFilePath("datafile-33-kB")
 	if filePath == "" {
 		// Make a temp file with 33 KB data.
 		file, err := os.CreateTemp(os.TempDir(), "PresignedPostPolicyTest")
@@ -8293,7 +8293,7 @@ func testPutObjectUploadSeekedObject() {
 
 	var tempfile *os.File
 
-	if fileName := getMintDataDirFilePath("datafile-100-kB"); fileName != "" {
+	if fileName := getTestsDataDirFilePath("datafile-100-kB"); fileName != "" {
 		tempfile, err = os.Open(fileName)
 		if err != nil {
 			logError(testName, function, args, startTime, "", "File open failed", err)
